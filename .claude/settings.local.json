@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:github.com)",
+      "Bash(pwsh -File \"C:/Users/patri/Agentic-powerplatform-Dev/connect.ps1\")",
+      "Bash(\"/mnt/c/Program Files/PowerShell/7/pwsh.exe\" -File \"C:/Users/patri/Agentic-powerplatform-Dev/connect.ps1\")",
+      "Bash(powershell.exe -File \"C:/Users/patri/Agentic-powerplatform-Dev/connect.ps1\")",
+      "Bash(powershell.exe -File \"C:/Users/patri/Agentic-powerplatform-Dev/create-table.ps1\")",
+      "Bash(powershell.exe -File \"C:/Users/patri/Agentic-powerplatform-Dev/add-to-solution.ps1\")",
+      "Bash(powershell.exe -File \"C:/Users/patri/Agentic-powerplatform-Dev/add-to-ppmextension.ps1\")",
+      "mcp__microsoft-learn__microsoft_docs_search",
+      "mcp__microsoft-learn__microsoft_code_sample_search",
+      "mcp__microsoft-learn__microsoft_docs_fetch",
+      "Bash(powershell.exe -File \"C:/Users/patri/Agentic-powerplatform-Dev/add-lookup.ps1\")",
+      "Bash(powershell.exe -File \"C:/Users/patri/Agentic-powerplatform-Dev/add-columns.ps1\")",
+      "Bash(powershell.exe -File \"C:/Users/patri/Agentic-powerplatform-Dev/find-table.ps1\")",
+      "Bash(powershell.exe -File \"C:/Users/patri/Agentic-powerplatform-Dev/add-member-lookup.ps1\")"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "microsoft-learn"
+  ]
+}
