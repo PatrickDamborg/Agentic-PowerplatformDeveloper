@@ -1,0 +1,64 @@
+{
+  "properties": {
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "triggers": {
+        "Recurrence": {
+          "type": "Recurrence",
+          "recurrence": {
+            "frequency": "Day",
+            "interval": 1
+          }
+        }
+      },
+      "actions": {
+        "Get_Threshold_Value": {
+          "type": "Compose",
+          "runAfter": {},
+          "inputs": "@parameters('pda_ThresholdDays (pda_ThresholdDays)')"
+        },
+        "Calculate_Cutoff_Date": {
+          "type": "Compose",
+          "runAfter": {
+            "Get_Threshold_Value": ["Succeeded"]
+          },
+          "inputs": "@addDays(utcNow(), mul(-1, int(outputs('Get_Threshold_Value'))))"
+        },
+        "Get_Notification_Email": {
+          "type": "Compose",
+          "runAfter": {
+            "Calculate_Cutoff_Date": ["Succeeded"]
+          },
+          "inputs": "@parameters('pda_NotificationEmail (pda_NotificationEmail)')"
+        },
+        "List_Dormant_Records": {
+          "type": "OpenApiConnection",
+          "runAfter": {
+            "Get_Notification_Email": ["Succeeded"]
+          },
+          "inputs": {
+            "host": {
+              "connectionName": "shared_commondataserviceforapps",
+              "operationId": "ListRecords",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+            },
+            "parameters": {
+              "entityName": "REPLACE_WITH_ENTITY_SET_NAME",
+              "$filter": "modifiedon lt @{outputs('Calculate_Cutoff_Date')}"
+            }
+          }
+        }
+      }
+    },
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "connectionName": "REPLACE_WITH_CONNECTION_NAME",
+        "source": "Embedded",
+        "id": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+        "tier": "NotSpecified"
+      }
+    }
+  },
+  "_comment": "PATTERN: Environment variables referenced via @parameters('schemaname (schemaname)') syntax. Create env vars with flows/create-env-variable.ps1 first. Never hard-code thresholds, email addresses, or feature flags — always use env variables so they can be changed without editing the flow."
+}

@@ -1,0 +1,124 @@
+{
+  "properties": {
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "triggers": {
+        "When_a_row_is_modified": {
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_commondataserviceforapps",
+              "operationId": "SubscribeWebhookTrigger",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+            },
+            "parameters": {
+              "subscriptionRequest/message": 3,
+              "subscriptionRequest/entityname": "REPLACE_WITH_TABLE_LOGICAL_NAME",
+              "subscriptionRequest/scope": 4
+            }
+          }
+        }
+      },
+      "actions": {
+        "Try_Scope": {
+          "type": "Scope",
+          "runAfter": {},
+          "actions": {
+            "Get_Record": {
+              "type": "OpenApiConnection",
+              "runAfter": {},
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "GetItem",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "REPLACE_WITH_ENTITY_SET_NAME",
+                  "recordId": "@triggerOutputs()?['body/REPLACE_WITH_PRIMARY_ID']"
+                }
+              }
+            },
+            "Process_Record": {
+              "type": "OpenApiConnection",
+              "runAfter": {
+                "Get_Record": ["Succeeded"]
+              },
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "UpdateRecord",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "REPLACE_WITH_ENTITY_SET_NAME",
+                  "recordId": "@triggerOutputs()?['body/REPLACE_WITH_PRIMARY_ID']",
+                  "item/REPLACE_WITH_COLUMN": "REPLACE_WITH_VALUE"
+                }
+              }
+            }
+          }
+        },
+        "Catch_Scope": {
+          "type": "Scope",
+          "runAfter": {
+            "Try_Scope": ["Failed", "TimedOut"]
+          },
+          "actions": {
+            "Compose_Error_Details": {
+              "type": "Compose",
+              "runAfter": {},
+              "inputs": {
+                "flowName": "@workflow()?['tags']['flowDisplayName']",
+                "runId": "@workflow()?['run']['name']",
+                "errorResult": "@result('Try_Scope')",
+                "timestamp": "@utcNow()"
+              }
+            },
+            "Log_Error_Row": {
+              "type": "OpenApiConnection",
+              "runAfter": {
+                "Compose_Error_Details": ["Succeeded"]
+              },
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "CreateRecord",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "REPLACE_WITH_ERROR_LOG_TABLE",
+                  "item/REPLACE_WITH_DETAILS_COLUMN": "@{outputs('Compose_Error_Details')}"
+                }
+              }
+            }
+          }
+        },
+        "Finally_Scope": {
+          "type": "Scope",
+          "runAfter": {
+            "Try_Scope": ["Succeeded", "Failed", "TimedOut", "Skipped"],
+            "Catch_Scope": ["Succeeded", "Failed", "TimedOut", "Skipped"]
+          },
+          "actions": {
+            "Cleanup_Or_Notify": {
+              "type": "Compose",
+              "runAfter": {},
+              "inputs": "Flow run completed at @{utcNow()}"
+            }
+          }
+        }
+      }
+    },
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "connectionName": "REPLACE_WITH_CONNECTION_NAME",
+        "source": "Embedded",
+        "id": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+        "tier": "NotSpecified"
+      }
+    }
+  },
+  "_comment": "PATTERN: Try/Catch/Finally via Scopes. Catch_Scope runs only on Failed or TimedOut from Try_Scope. Finally_Scope runs after both regardless of outcome. The flow run shows as Succeeded even if Try fails, because Catch handles the error. Use result('Try_Scope') to access error details."
+}

@@ -1,0 +1,102 @@
+{
+  "properties": {
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "triggers": {
+        "When_a_row_is_created": {
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_commondataserviceforapps",
+              "operationId": "SubscribeWebhookTrigger",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+            },
+            "parameters": {
+              "subscriptionRequest/message": 1,
+              "subscriptionRequest/entityname": "REPLACE_WITH_TABLE_LOGICAL_NAME",
+              "subscriptionRequest/scope": 4
+            }
+          }
+        }
+      },
+      "actions": {
+        "Step_1_Get_Related_Record": {
+          "type": "OpenApiConnection",
+          "runAfter": {},
+          "inputs": {
+            "host": {
+              "connectionName": "shared_commondataserviceforapps",
+              "operationId": "GetItem",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+            },
+            "parameters": {
+              "entityName": "REPLACE_WITH_ENTITY_SET_NAME",
+              "recordId": "@triggerOutputs()?['body/REPLACE_WITH_LOOKUP_FIELD']"
+            }
+          }
+        },
+        "Step_2_Condition_Check": {
+          "type": "If",
+          "runAfter": {
+            "Step_1_Get_Related_Record": ["Succeeded"]
+          },
+          "expression": {
+            "equals": [
+              "@outputs('Step_1_Get_Related_Record')?['body/statuscode']",
+              1
+            ]
+          },
+          "actions": {
+            "Step_2a_True_Action": {
+              "type": "OpenApiConnection",
+              "runAfter": {},
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "UpdateRecord",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "REPLACE_WITH_ENTITY_SET_NAME",
+                  "recordId": "@triggerOutputs()?['body/REPLACE_WITH_PRIMARY_ID']",
+                  "item/REPLACE_WITH_COLUMN": "REPLACE_WITH_VALUE"
+                }
+              }
+            }
+          },
+          "else": {
+            "actions": {}
+          }
+        },
+        "Step_3_Final_Action": {
+          "type": "OpenApiConnection",
+          "runAfter": {
+            "Step_2_Condition_Check": ["Succeeded"]
+          },
+          "inputs": {
+            "host": {
+              "connectionName": "shared_commondataserviceforapps",
+              "operationId": "UpdateRecord",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+            },
+            "parameters": {
+              "entityName": "REPLACE_WITH_ENTITY_SET_NAME",
+              "recordId": "@triggerOutputs()?['body/REPLACE_WITH_PRIMARY_ID']",
+              "item/REPLACE_WITH_COLUMN": "REPLACE_WITH_VALUE"
+            }
+          }
+        }
+      }
+    },
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "connectionName": "REPLACE_WITH_CONNECTION_NAME",
+        "source": "Embedded",
+        "id": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+        "tier": "NotSpecified"
+      }
+    }
+  },
+  "_comment": "PATTERN: Linear chain. Each action's runAfter references exactly one predecessor. Step_1 -> Step_2 -> Step_3. No parallel branches. Actions inside If/Else are scoped — the next action after the condition uses runAfter on the condition itself, not on actions inside it."
+}

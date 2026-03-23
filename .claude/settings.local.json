@@ -14,7 +14,10 @@
       "Bash(powershell.exe -File \"C:/Users/patri/Agentic-powerplatform-Dev/add-lookup.ps1\")",
       "Bash(powershell.exe -File \"C:/Users/patri/Agentic-powerplatform-Dev/add-columns.ps1\")",
       "Bash(powershell.exe -File \"C:/Users/patri/Agentic-powerplatform-Dev/find-table.ps1\")",
-      "Bash(powershell.exe -File \"C:/Users/patri/Agentic-powerplatform-Dev/add-member-lookup.ps1\")"
+      "Bash(powershell.exe -File \"C:/Users/patri/Agentic-powerplatform-Dev/add-member-lookup.ps1\")",
+      "Bash(pwsh -Command \":*)",
+      "Bash(pwsh -Command \"& ''./flows/update-flow.ps1'' -FlowId ''563f5f64-b426-f111-8342-7c1e5221480b'' -DefinitionPath ''./flows/risk-100-create-task.json'' -Activate\")",
+      "Bash(pwsh scripts/deploy.ps1 -CommitMessage \"Add deploy skill, flow agents, and helper scripts\")"
     ]
   },
   "enableAllProjectMcpServers": true,

@@ -1,0 +1,133 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "runtimeSource": "embedded",
+        "connection": {},
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        }
+      },
+      "triggers": {
+        "When_a_risk_is_modified": {
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "connectionName": "shared_commondataserviceforapps",
+              "operationId": "SubscribeWebhookTrigger"
+            },
+            "parameters": {
+              "subscriptionRequest/message": 3,
+              "subscriptionRequest/entityname": "pum_risk",
+              "subscriptionRequest/scope": 4,
+              "subscriptionRequest/filteringattributes": "pum_probability"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        }
+      },
+      "actions": {
+        "Try_Scope": {
+          "type": "Scope",
+          "runAfter": {},
+          "actions": {
+            "Check_Probability_Is_100": {
+              "type": "If",
+              "runAfter": {},
+              "expression": {
+                "equals": [
+                  "@triggerOutputs()?['body/pum_probability']",
+                  976880005
+                ]
+              },
+              "actions": {
+                "Create_Gantt_Task": {
+                  "type": "OpenApiConnection",
+                  "runAfter": {},
+                  "inputs": {
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "connectionName": "shared_commondataserviceforapps",
+                      "operationId": "CreateRecord"
+                    },
+                    "parameters": {
+                      "entityName": "pum_gantttasks",
+                      "item/pum_name": "Risk Mitigation: @{triggerOutputs()?['body/pum_name']}",
+                      "item/pum_kanbanstatus": 1,
+                      "item/pum_startdate": "@utcNow()",
+                      "item/pum_systemuser@odata.bind": "systemusers(24ea6476-ecc6-f011-8544-7ced8d77273c)",
+                      "item/pum_taskcategory": 976880000
+                    },
+                    "authentication": "@parameters('$authentication')"
+                  }
+                },
+                "Create_Assignment": {
+                  "type": "OpenApiConnection",
+                  "runAfter": {
+                    "Create_Gantt_Task": [
+                      "Succeeded"
+                    ]
+                  },
+                  "inputs": {
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "connectionName": "shared_commondataserviceforapps",
+                      "operationId": "CreateRecord"
+                    },
+                    "parameters": {
+                      "entityName": "pum_assignments",
+                      "item/pum_taskname": "Risk Mitigation: @{triggerOutputs()?['body/pum_name']}",
+                      "item/pum_asstask@odata.bind": "pum_gantttasks(@{outputs('Create_Gantt_Task')?['body/pum_gantttaskid']})",
+                      "item/pum_resource@odata.bind": "pum_resources(b20fbcb7-c026-f111-8342-7c1e5221480b)",
+                      "item/pum_user@odata.bind": "systemusers(24ea6476-ecc6-f011-8544-7ced8d77273c)"
+                    },
+                    "authentication": "@parameters('$authentication')"
+                  }
+                }
+              },
+              "else": {
+                "actions": {}
+              }
+            }
+          }
+        },
+        "Catch_Scope": {
+          "type": "Scope",
+          "runAfter": {
+            "Try_Scope": [
+              "Failed",
+              "TimedOut"
+            ]
+          },
+          "actions": {
+            "Compose_Error": {
+              "type": "Compose",
+              "runAfter": {},
+              "inputs": {
+                "flowName": "Risk 100% - Create Task",
+                "error": "@result('Try_Scope')",
+                "timestamp": "@utcNow()"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "schemaVersion": "1.0.0.0"
+}
