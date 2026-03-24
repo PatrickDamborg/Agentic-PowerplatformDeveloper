@@ -56,9 +56,39 @@
                 ]
               },
               "actions": {
+                "Get_Risk_Owner": {
+                  "type": "Compose",
+                  "runAfter": {},
+                  "inputs": "@triggerOutputs()?['body/_ownerid_value']"
+                },
+                "Find_Owner_Resource": {
+                  "type": "OpenApiConnection",
+                  "runAfter": {
+                    "Get_Risk_Owner": [
+                      "Succeeded"
+                    ]
+                  },
+                  "inputs": {
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "connectionName": "shared_commondataserviceforapps",
+                      "operationId": "ListRecords"
+                    },
+                    "parameters": {
+                      "entityName": "pum_resources",
+                      "$filter": "_pum_user_value eq '@{outputs('Get_Risk_Owner')}'",
+                      "$top": 1
+                    },
+                    "authentication": "@parameters('$authentication')"
+                  }
+                },
                 "Create_Gantt_Task": {
                   "type": "OpenApiConnection",
-                  "runAfter": {},
+                  "runAfter": {
+                    "Find_Owner_Resource": [
+                      "Succeeded"
+                    ]
+                  },
                   "inputs": {
                     "host": {
                       "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
@@ -70,7 +100,7 @@
                       "item/pum_name": "Risk Mitigation: @{triggerOutputs()?['body/pum_name']}",
                       "item/pum_kanbanstatus": 1,
                       "item/pum_startdate": "@utcNow()",
-                      "item/pum_systemuser@odata.bind": "systemusers(24ea6476-ecc6-f011-8544-7ced8d77273c)",
+                      "item/pum_systemuser@odata.bind": "systemusers(@{outputs('Get_Risk_Owner')})",
                       "item/pum_taskcategory": 976880000
                     },
                     "authentication": "@parameters('$authentication')"
@@ -93,8 +123,8 @@
                       "entityName": "pum_assignments",
                       "item/pum_taskname": "Risk Mitigation: @{triggerOutputs()?['body/pum_name']}",
                       "item/pum_asstask@odata.bind": "pum_gantttasks(@{outputs('Create_Gantt_Task')?['body/pum_gantttaskid']})",
-                      "item/pum_resource@odata.bind": "pum_resources(b20fbcb7-c026-f111-8342-7c1e5221480b)",
-                      "item/pum_user@odata.bind": "systemusers(24ea6476-ecc6-f011-8544-7ced8d77273c)"
+                      "item/pum_resource@odata.bind": "pum_resources(@{outputs('Find_Owner_Resource')?['body/value']?[0]?['pum_resourceid']})",
+                      "item/pum_user@odata.bind": "systemusers(@{outputs('Get_Risk_Owner')})"
                     },
                     "authentication": "@parameters('$authentication')"
                   }
