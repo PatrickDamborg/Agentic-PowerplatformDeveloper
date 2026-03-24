@@ -9,8 +9,12 @@ if (-not $FlowId -and -not $FlowName) {
     exit 1
 }
 
-Import-Module (Join-Path $PSScriptRoot "..\helpers.psm1") -Force
-$conn = Initialize-DataverseConnection -EnvPath (Join-Path $PSScriptRoot "..\.env")
+# Resolve repository root
+$root = $PSScriptRoot
+while ($root -and -not (Test-Path (Join-Path $root "helpers.psm1"))) { $root = Split-Path $root -Parent }
+if (-not $root) { throw "Cannot find helpers.psm1 in any parent directory." }
+Import-Module (Join-Path $root "helpers.psm1") -Force
+$conn = Initialize-DataverseConnection -EnvPath (Join-Path $root ".env")
 $h = $conn.Headers
 $url = $conn.BaseUrl
 
