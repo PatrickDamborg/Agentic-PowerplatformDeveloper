@@ -101,19 +101,25 @@ When building or modifying Power Automate cloud flows via the Dataverse Web API:
 
 5. **Environment variables for thresholds** — Never hard-code business values (days, counts, email addresses, feature flags). Create environment variables using `pwsh flows/create-env-variable.ps1` and reference them in flow expressions as `@parameters('schemaname (schemaname)')`.
 
+6. **Dynamic values for record references** — Never hard-code record GUIDs (system users, resources, projects, assignments, etc.) in flow actions. Instead, resolve them dynamically at runtime:
+   - Use trigger outputs for related record IDs (e.g., `triggerOutputs()?['body/_ownerid_value']` for the record owner)
+   - Use **List Records** or **Get Record** actions to look up related records by filtering on a known value (e.g., find the `pum_resource` whose `_pum_user_value` matches the owner)
+   - Reference action outputs in `@odata.bind` expressions: `entitysetname(@{outputs('Action_Name')?['body/primaryid']})`
+   - For OData filters on lookup `_value` fields, do **not** wrap the GUID in quotes: `_pum_user_value eq @{outputs('Get_Owner')}` (not `'@{...}'`)
+
 ### API Details
 
-6. **Cloud flows are `workflow` records** with `category = 5`. The definition lives in the `clientdata` field as a JSON string (Logic Apps workflow definition format).
+7. **Cloud flows are `workflow` records** with `category = 5`. The definition lives in the `clientdata` field as a JSON string (Logic Apps workflow definition format).
 
-7. **Solution association** — Always use `MSCRM.SolutionUniqueName` header when creating flows. Only solution-aware flows can be managed via API.
+8. **Solution association** — Always use `MSCRM.SolutionUniqueName` header when creating flows. Only solution-aware flows can be managed via API.
 
-8. **Activation** — New flows are created in Draft state (`statecode=0`). Activate via `pwsh flows/toggle-flow.ps1`. Always deactivate before updating `clientdata`.
+9. **Activation** — New flows are created in Draft state (`statecode=0`). Activate via `pwsh flows/toggle-flow.ps1`. Always deactivate before updating `clientdata`.
 
-9. **Connection references** — Flow definitions reference connections via `connectionName` in the host block. Use `shared_commondataserviceforapps` for Dataverse connector actions. Connection references must exist in the solution.
+10. **Connection references** — Flow definitions reference connections via `connectionName` in the host block. Use `shared_commondataserviceforapps` for Dataverse connector actions. Connection references must exist in the solution.
 
 ### Multi-Agent Workflow
 
-10. **Build-Debug loop** — Use `@flow-builder` to create/modify flows via API, then `@flow-debugger` to validate in the Power Automate designer via Chrome browser automation. The debugger checks for visual issues, run history errors, and performs test runs. Iterate until the flow passes all checks.
+11. **Build-Debug loop** — Use `@flow-builder` to create/modify flows via API, then `@flow-debugger` to validate in the Power Automate designer via Chrome browser automation. The debugger checks for visual issues, run history errors, and performs test runs. Iterate until the flow passes all checks.
 
 ### Script Reference
 | Script | Purpose |
