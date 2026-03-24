@@ -76,7 +76,7 @@
                     },
                     "parameters": {
                       "entityName": "pum_resources",
-                      "$filter": "_pum_user_value eq '@{outputs('Get_Risk_Owner')}'",
+                      "$filter": "_pum_user_value eq @{outputs('Get_Risk_Owner')}",
                       "$top": 1
                     },
                     "authentication": "@parameters('$authentication')"
