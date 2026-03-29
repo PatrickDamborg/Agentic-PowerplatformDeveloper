@@ -445,6 +445,12 @@ function debounce(fn, ms) {
 // ============================================================
 
 document.addEventListener("DOMContentLoaded", () => {
+    // Show the redirect URI the user needs to register
+    const redirectEl = document.getElementById("current-redirect-uri");
+    if (redirectEl) {
+        redirectEl.textContent = window.location.origin + window.location.pathname;
+    }
+
     // Load saved config
     config = loadConfig();
 
