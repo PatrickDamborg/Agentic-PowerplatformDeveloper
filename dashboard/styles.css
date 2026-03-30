@@ -162,6 +162,44 @@ body {
     font-size: var(--fontSizeBase200);
 }
 
+/* ===== Preview Banner ===== */
+.preview-banner {
+    background: var(--colorPaletteYellowBackground1);
+    color: var(--colorPaletteYellowForeground1);
+    padding: var(--spacingVerticalS) var(--spacingHorizontalL);
+    border-radius: var(--borderRadius);
+    text-align: center;
+    font-size: var(--fontSizeBase300);
+    font-weight: var(--fontWeightSemibold);
+    margin-bottom: var(--spacingVerticalL);
+}
+
+.preview-banner a {
+    color: var(--colorBrandBackground);
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+/* ===== Preview Divider ===== */
+.preview-divider {
+    display: flex;
+    align-items: center;
+    gap: var(--spacingHorizontalM);
+    margin: var(--spacingVerticalXL) 0 var(--spacingVerticalL);
+    color: var(--colorNeutralForeground3);
+    font-size: var(--fontSizeBase200);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.preview-divider::before,
+.preview-divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--colorNeutralStroke1);
+}
+
 /* ===== Dashboard ===== */
 .dashboard {
     max-width: 1200px;

@@ -48,6 +48,7 @@ let msalInstance = null;
 let accessToken = null;
 let config = null;
 let allActivities = [];
+let previewMode = false;
 
 // ============================================================
 // Config persistence
@@ -429,6 +430,144 @@ function sessionIcon() {
 }
 
 // ============================================================
+// Preview Mode (Sample Data)
+// ============================================================
+
+function generateSampleActivities() {
+    const p = "demo";
+    const now = Date.now();
+    const hour = 3600000;
+
+    return [
+        {
+            [`${p}_activitylogid`]: "s1",
+            [`${p}_title`]: "Created table pda_Project",
+            [`${p}_category`]: 100000000,
+            [`${p}_actionstatus`]: 100000000,
+            [`${p}_executedon`]: new Date(now - hour * 1).toISOString(),
+            [`${p}_entity`]: "pda_Project",
+            [`${p}_sessionid`]: "session-a1b2",
+            [`${p}_what`]: "Created a new Dataverse table pda_Project with columns for Name, Status, Start Date, and Owner.",
+            [`${p}_why`]: "The project tracking solution needs a dedicated table to store project metadata and link related tasks.",
+            [`${p}_how`]: "POST /api/data/v9.2/EntityDefinitions\n{\n  SchemaName: 'pda_Project',\n  DisplayName: 'Project',\n  PrimaryNameAttribute: 'pda_name'\n}",
+            [`${p}_bestpractice`]: "Always use a publisher prefix for custom tables to avoid naming conflicts across solutions.",
+            [`${p}_apiendpoint`]: "POST /api/data/v9.2/EntityDefinitions",
+            [`${p}_environment`]: "https://contoso-dev.crm.dynamics.com",
+        },
+        {
+            [`${p}_activitylogid`]: "s2",
+            [`${p}_title`]: "Added lookup: Task → Project",
+            [`${p}_category`]: 100000000,
+            [`${p}_actionstatus`]: 100000000,
+            [`${p}_executedon`]: new Date(now - hour * 2).toISOString(),
+            [`${p}_entity`]: "pda_Task",
+            [`${p}_sessionid`]: "session-a1b2",
+            [`${p}_what`]: "Added a Many-to-One lookup from pda_Task to pda_Project.",
+            [`${p}_why`]: "Tasks need to reference their parent project for reporting and navigation.",
+            [`${p}_how`]: "POST /api/data/v9.2/RelationshipDefinitions\nRelationshipType: OneToManyRelationship",
+            [`${p}_bestpractice`]: "Use cascading behaviour 'RemoveLink' on delete to avoid orphaned records.",
+        },
+        {
+            [`${p}_activitylogid`]: "s3",
+            [`${p}_title`]: "Deployed cloud flow: Notify on Task Completion",
+            [`${p}_category`]: 100000001,
+            [`${p}_actionstatus`]: 100000000,
+            [`${p}_executedon`]: new Date(now - hour * 4).toISOString(),
+            [`${p}_entity`]: "Cloud Flow",
+            [`${p}_sessionid`]: "session-c3d4",
+            [`${p}_what`]: "Created an automated cloud flow that sends a Teams notification when a task status changes to Completed.",
+            [`${p}_why`]: "Stakeholders need real-time visibility when tasks are finished.",
+            [`${p}_how`]: "Trigger: Dataverse 'When a row is modified'\nCondition: Status == Completed\nAction: Post adaptive card to Teams channel",
+            [`${p}_bestpractice`]: "Filter trigger conditions at the connector level to reduce unnecessary flow runs.",
+        },
+        {
+            [`${p}_activitylogid`]: "s4",
+            [`${p}_title`]: "Added pda_Project to solution",
+            [`${p}_category`]: 100000002,
+            [`${p}_actionstatus`]: 100000000,
+            [`${p}_executedon`]: new Date(now - hour * 5).toISOString(),
+            [`${p}_entity`]: "pda_Project",
+            [`${p}_sessionid`]: "session-a1b2",
+            [`${p}_what`]: "Added the pda_Project table and all related components to the ProjectTracker solution.",
+            [`${p}_why`]: "All customisations must belong to a managed solution for ALM and deployment.",
+            [`${p}_how`]: "POST /api/data/v9.2/AddSolutionComponent",
+            [`${p}_bestpractice`]: "Always add components to a solution immediately after creation for traceability.",
+        },
+        {
+            [`${p}_activitylogid`]: "s5",
+            [`${p}_title`]: "Configured security role: Project Manager",
+            [`${p}_category`]: 100000003,
+            [`${p}_actionstatus`]: 100000000,
+            [`${p}_executedon`]: new Date(now - hour * 6).toISOString(),
+            [`${p}_entity`]: "Security Role",
+            [`${p}_sessionid`]: "session-e5f6",
+            [`${p}_what`]: "Created a security role granting CRUD on pda_Project (org-level) and pda_Task (BU-level).",
+            [`${p}_why`]: "Project Managers need full access to projects but scoped access to tasks within their business unit.",
+            [`${p}_how`]: "PATCH /api/data/v9.2/roles(...)/privileges",
+            [`${p}_bestpractice`]: "Follow least-privilege principle — grant only the access levels users actually need.",
+        },
+        {
+            [`${p}_activitylogid`]: "s6",
+            [`${p}_title`]: "Data import: Legacy projects migration",
+            [`${p}_category`]: 100000005,
+            [`${p}_actionstatus`]: 100000002,
+            [`${p}_executedon`]: new Date(now - hour * 8).toISOString(),
+            [`${p}_entity`]: "pda_Project",
+            [`${p}_sessionid`]: "session-g7h8",
+            [`${p}_what`]: "Attempted to import 150 legacy project records from CSV. 3 rows failed due to duplicate name constraint.",
+            [`${p}_why`]: "Migrating historical data from the previous system into the new Dataverse solution.",
+            [`${p}_how`]: "POST /api/data/v9.2/$batch\nContent-Type: multipart/mixed",
+            [`${p}_bestpractice`]: "Always run a dry-run validation before bulk imports to catch constraint violations early.",
+        },
+        {
+            [`${p}_activitylogid`]: "s7",
+            [`${p}_title`]: "Updated environment variable: DefaultRegion",
+            [`${p}_category`]: 100000004,
+            [`${p}_actionstatus`]: 100000000,
+            [`${p}_executedon`]: new Date(now - hour * 10).toISOString(),
+            [`${p}_entity`]: "Environment Variable",
+            [`${p}_sessionid`]: "session-e5f6",
+            [`${p}_what`]: "Set the DefaultRegion environment variable to 'EMEA' for the dev environment.",
+            [`${p}_why`]: "Cloud flows reference this variable for region-specific API routing.",
+            [`${p}_how`]: "PATCH /api/data/v9.2/environmentvariabledefinitions(...)",
+            [`${p}_bestpractice`]: "Use environment variables instead of hard-coded values so flows adapt across environments.",
+        },
+    ];
+}
+
+function enterPreviewMode() {
+    previewMode = true;
+    config = { clientId: "", tenantId: "", dataverseUrl: "https://contoso-dev.crm.dynamics.com", prefix: "demo" };
+
+    document.getElementById("setup-panel").style.display = "none";
+    document.getElementById("dashboard").style.display = "";
+    document.getElementById("btn-login").style.display = "none";
+    document.getElementById("preview-banner").style.display = "";
+    document.getElementById("env-badge").style.display = "";
+    document.getElementById("env-badge").textContent = "contoso-dev (preview)";
+    document.getElementById("user-info").style.display = "";
+    document.getElementById("user-name").textContent = "Preview User";
+
+    allActivities = generateSampleActivities();
+    renderActivities(allActivities);
+    updateStats(allActivities);
+}
+
+function exitPreviewMode() {
+    previewMode = false;
+    config = loadConfig();
+    allActivities = [];
+
+    document.getElementById("dashboard").style.display = "none";
+    document.getElementById("setup-panel").style.display = "flex";
+    document.getElementById("preview-banner").style.display = "none";
+    document.getElementById("btn-login").style.display = "";
+    document.getElementById("btn-logout").style.display = "none";
+    document.getElementById("user-info").style.display = "none";
+    document.getElementById("env-badge").style.display = "none";
+}
+
+// ============================================================
 // Debounce utility
 // ============================================================
 
@@ -501,11 +640,42 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     document.getElementById("btn-logout").addEventListener("click", logout);
 
-    // Filters
-    document.getElementById("filter-category").addEventListener("change", loadActivities);
-    document.getElementById("filter-status").addEventListener("change", loadActivities);
-    document.getElementById("search-input").addEventListener("input", debounce(loadActivities, 400));
-    document.getElementById("btn-refresh").addEventListener("click", loadActivities);
+    // Preview mode
+    document.getElementById("btn-preview").addEventListener("click", () => {
+        enterPreviewMode();
+    });
+    document.getElementById("exit-preview").addEventListener("click", (e) => {
+        e.preventDefault();
+        exitPreviewMode();
+    });
+
+    // Auto-enter preview if ?preview query param is present
+    if (new URLSearchParams(window.location.search).has("preview")) {
+        enterPreviewMode();
+    }
+
+    // Filters — in preview mode, filter the sample data client-side
+    const handleFilter = () => {
+        if (previewMode) {
+            const cat = document.getElementById("filter-category").value;
+            const st = document.getElementById("filter-status").value;
+            const q = (document.getElementById("search-input").value || "").toLowerCase();
+            const p = config.prefix.toLowerCase();
+            let filtered = generateSampleActivities();
+            if (cat) filtered = filtered.filter((a) => String(a[`${p}_category`]) === cat);
+            if (st) filtered = filtered.filter((a) => String(a[`${p}_actionstatus`]) === st);
+            if (q) filtered = filtered.filter((a) => (a[`${p}_title`] || "").toLowerCase().includes(q));
+            allActivities = filtered;
+            renderActivities(allActivities);
+            updateStats(allActivities);
+        } else {
+            loadActivities();
+        }
+    };
+    document.getElementById("filter-category").addEventListener("change", handleFilter);
+    document.getElementById("filter-status").addEventListener("change", handleFilter);
+    document.getElementById("search-input").addEventListener("input", debounce(handleFilter, 400));
+    document.getElementById("btn-refresh").addEventListener("click", handleFilter);
 
     // Close dialog on Escape
     document.addEventListener("keydown", (e) => {
