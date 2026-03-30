@@ -64,6 +64,13 @@
                     <fluent-button id="btn-save-config" appearance="accent">Save &amp; Connect</fluent-button>
                 </div>
 
+                <div class="preview-divider">
+                    <span>or</span>
+                </div>
+                <div class="form-actions" style="justify-content: center;">
+                    <fluent-button id="btn-preview" appearance="outline">Preview with Sample Data</fluent-button>
+                </div>
+
                 <div class="setup-note">
                     <strong>Note:</strong> Your app registration needs <code>Dynamics CRM user_impersonation</code> API permission
                     and a <strong>SPA</strong> redirect URI matching this site's URL
@@ -75,6 +82,11 @@
         <!-- Main Dashboard (shown after auth) -->
         <div id="dashboard" class="dashboard" style="display:none;">
             <!-- Toolbar -->
+            <!-- Preview Banner -->
+            <div id="preview-banner" class="preview-banner" style="display:none;">
+                <span>Preview Mode — Showing sample data. <a href="#" id="exit-preview">Connect to Dataverse</a> for live data.</span>
+            </div>
+
             <div class="toolbar">
                 <div class="toolbar-left">
                     <fluent-text-field id="search-input" placeholder="Search activities..." style="width:300px;">
