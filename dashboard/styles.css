@@ -207,6 +207,63 @@ body {
     padding: var(--spacingVerticalXL);
 }
 
+/* ===== Filter Tabs ===== */
+.filter-tabs {
+    display: flex;
+    gap: 4px;
+    padding: 4px;
+    background: var(--colorNeutralBackground1);
+    border-radius: var(--borderRadius);
+    box-shadow: var(--shadow4);
+    margin-bottom: var(--spacingVerticalL);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.filter-tab {
+    padding: 8px 16px;
+    border: none;
+    background: transparent;
+    border-radius: 6px;
+    font-family: var(--fontFamily);
+    font-size: var(--fontSizeBase300);
+    font-weight: var(--fontWeightSemibold);
+    color: var(--colorNeutralForeground2);
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+    white-space: nowrap;
+    position: relative;
+}
+
+.filter-tab:hover {
+    background: var(--colorNeutralBackground3);
+    color: var(--colorNeutralForeground1);
+}
+
+.filter-tab.active {
+    background: var(--colorBrandBackground);
+    color: #fff;
+}
+
+.filter-tab .tab-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    font-size: 11px;
+    font-weight: var(--fontWeightSemibold);
+    margin-left: 6px;
+    background: rgba(0, 0, 0, 0.1);
+    color: inherit;
+}
+
+.filter-tab.active .tab-count {
+    background: rgba(255, 255, 255, 0.25);
+}
+
 /* ===== Toolbar ===== */
 .toolbar {
     display: flex;
@@ -564,6 +621,21 @@ fluent-dialog::part(control) {
 
     .dashboard {
         padding: var(--spacingVerticalL);
+    }
+
+    .filter-tabs {
+        overflow-x: auto;
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+
+    .filter-tabs::-webkit-scrollbar {
+        display: none;
+    }
+
+    .filter-tab {
+        padding: 6px 12px;
+        font-size: var(--fontSizeBase200);
     }
 
     .toolbar {

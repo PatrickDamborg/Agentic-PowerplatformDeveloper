@@ -87,20 +87,23 @@
                 <span>Preview Mode — Showing sample data. <a href="#" id="exit-preview">Connect to Dataverse</a> for live data.</span>
             </div>
 
+            <!-- Category Tabs -->
+            <div class="filter-tabs" id="filter-tabs">
+                <button class="filter-tab active" data-category="">All</button>
+                <button class="filter-tab" data-category="100000000">Schema Changes</button>
+                <button class="filter-tab" data-category="100000001">Cloud Flows</button>
+                <button class="filter-tab" data-category="100000002">Solution Ops</button>
+                <button class="filter-tab" data-category="100000003">Security</button>
+                <button class="filter-tab" data-category="100000004">Configuration</button>
+                <button class="filter-tab" data-category="100000005">Data Migration</button>
+                <button class="filter-tab" data-category="100000006">Other</button>
+            </div>
+
+            <!-- Secondary Toolbar -->
             <div class="toolbar">
                 <div class="toolbar-left">
                     <fluent-text-field id="search-input" placeholder="Search activities..." style="width:300px;">
                     </fluent-text-field>
-                    <fluent-select id="filter-category" style="min-width:180px;">
-                        <fluent-option value="">All Categories</fluent-option>
-                        <fluent-option value="100000000">Schema Change</fluent-option>
-                        <fluent-option value="100000001">Cloud Flow</fluent-option>
-                        <fluent-option value="100000002">Solution Operation</fluent-option>
-                        <fluent-option value="100000003">Security</fluent-option>
-                        <fluent-option value="100000004">Configuration</fluent-option>
-                        <fluent-option value="100000005">Data Migration</fluent-option>
-                        <fluent-option value="100000006">Other</fluent-option>
-                    </fluent-select>
                     <fluent-select id="filter-status" style="min-width:150px;">
                         <fluent-option value="">All Statuses</fluent-option>
                         <fluent-option value="100000000">Completed</fluent-option>
