@@ -229,12 +229,15 @@ function renderActivities(activities) {
             const component = a[`${p}_entity`] || "";
             const sessionId = a[`${p}_sessionid`] || "";
             const what = a[`${p}_what`] || "";
+            const resourceUrl = a[`${p}_resourceurl`] || "";
+            const resourceType = a[`${p}_resourcetype`] || "";
 
             return `
                 <div class="activity-card" data-status="${status}" data-id="${a[`${p}_activitylogid`]}" onclick="openDetail(this)">
                     <div class="card-header">
                         <div class="card-title">${escapeHtml(a[`${p}_title`] || "Untitled")}</div>
                         <div class="card-meta">
+                            ${resourceUrl ? `<a href="${escapeHtml(resourceUrl)}" target="_blank" rel="noopener" class="resource-link" onclick="event.stopPropagation();" title="Open ${escapeHtml(resourceType)} in Power Platform">${linkIcon()} View ${escapeHtml(resourceType)}</a>` : ""}
                             <span class="badge badge-category">${categoryLabel}</span>
                             <span class="badge badge-status-${statusInfo.css}">${statusInfo.label}</span>
                         </div>
@@ -317,10 +320,15 @@ window.openDetail = function (cardEl) {
     const apiEndpoint = activity[`${p}_apiendpoint`] || "";
     const sessionId = activity[`${p}_sessionid`] || "";
     const env = activity[`${p}_environment`] || "";
+    const resourceUrl = activity[`${p}_resourceurl`] || "";
+    const resourceType = activity[`${p}_resourcetype`] || "";
 
     const html = `
         <div class="detail-header">
-            <div class="detail-title">${escapeHtml(activity[`${p}_title`] || "Untitled")}</div>
+            <div class="detail-title-row">
+                <div class="detail-title">${escapeHtml(activity[`${p}_title`] || "Untitled")}</div>
+                ${resourceUrl ? `<a href="${escapeHtml(resourceUrl)}" target="_blank" rel="noopener" class="detail-resource-link" title="Open in Power Platform">${linkIcon()} Open ${escapeHtml(resourceType)}</a>` : ""}
+            </div>
             <div class="detail-meta">
                 <span class="badge badge-category">${CATEGORY_MAP[category] || "Other"}</span>
                 <span class="badge badge-status-${statusInfo.css}">${statusInfo.label}</span>
@@ -429,6 +437,10 @@ function sessionIcon() {
     return `<svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M8 8a3 3 0 100-6 3 3 0 000 6zm-5 6s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1H3z"/></svg>`;
 }
 
+function linkIcon() {
+    return `<svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M6.354 5.5H4a3 3 0 000 6h3a3 3 0 002.83-4H9.4a2 2 0 01-1.4 3H5a2 2 0 110-4h1.354zm3.292 5H12a3 3 0 000-6H9a3 3 0 00-2.83 4h.43a2 2 0 011.4-3h3a2 2 0 110 4h-1.354z"/></svg>`;
+}
+
 // ============================================================
 // Preview Mode (Sample Data)
 // ============================================================
@@ -453,6 +465,8 @@ function generateSampleActivities() {
             [`${p}_bestpractice`]: "Always use a publisher prefix for custom tables to avoid naming conflicts across solutions.",
             [`${p}_apiendpoint`]: "POST /api/data/v9.2/EntityDefinitions",
             [`${p}_environment`]: "https://contoso-dev.crm.dynamics.com",
+            [`${p}_resourceurl`]: "https://make.powerapps.com/environments/contoso-dev/entities/pda_project",
+            [`${p}_resourcetype`]: "Table",
         },
         {
             [`${p}_activitylogid`]: "s2",
@@ -466,6 +480,8 @@ function generateSampleActivities() {
             [`${p}_why`]: "Tasks need to reference their parent project for reporting and navigation.",
             [`${p}_how`]: "POST /api/data/v9.2/RelationshipDefinitions\nRelationshipType: OneToManyRelationship",
             [`${p}_bestpractice`]: "Use cascading behaviour 'RemoveLink' on delete to avoid orphaned records.",
+            [`${p}_resourceurl`]: "https://make.powerapps.com/environments/contoso-dev/entities/pda_task/relationships",
+            [`${p}_resourcetype`]: "Table",
         },
         {
             [`${p}_activitylogid`]: "s3",
@@ -479,6 +495,8 @@ function generateSampleActivities() {
             [`${p}_why`]: "Stakeholders need real-time visibility when tasks are finished.",
             [`${p}_how`]: "Trigger: Dataverse 'When a row is modified'\nCondition: Status == Completed\nAction: Post adaptive card to Teams channel",
             [`${p}_bestpractice`]: "Filter trigger conditions at the connector level to reduce unnecessary flow runs.",
+            [`${p}_resourceurl`]: "https://make.powerautomate.com/environments/contoso-dev/flows/f1a2b3c4-d5e6-7890-abcd-ef1234567890/details",
+            [`${p}_resourcetype`]: "Flow",
         },
         {
             [`${p}_activitylogid`]: "s4",
@@ -492,6 +510,8 @@ function generateSampleActivities() {
             [`${p}_why`]: "All customisations must belong to a managed solution for ALM and deployment.",
             [`${p}_how`]: "POST /api/data/v9.2/AddSolutionComponent",
             [`${p}_bestpractice`]: "Always add components to a solution immediately after creation for traceability.",
+            [`${p}_resourceurl`]: "https://make.powerapps.com/environments/contoso-dev/solutions/ProjectTracker",
+            [`${p}_resourcetype`]: "Solution",
         },
         {
             [`${p}_activitylogid`]: "s5",
@@ -505,6 +525,8 @@ function generateSampleActivities() {
             [`${p}_why`]: "Project Managers need full access to projects but scoped access to tasks within their business unit.",
             [`${p}_how`]: "PATCH /api/data/v9.2/roles(...)/privileges",
             [`${p}_bestpractice`]: "Follow least-privilege principle — grant only the access levels users actually need.",
+            [`${p}_resourceurl`]: "https://make.powerapps.com/environments/contoso-dev/security/roles",
+            [`${p}_resourcetype`]: "Security Role",
         },
         {
             [`${p}_activitylogid`]: "s6",
@@ -518,6 +540,8 @@ function generateSampleActivities() {
             [`${p}_why`]: "Migrating historical data from the previous system into the new Dataverse solution.",
             [`${p}_how`]: "POST /api/data/v9.2/$batch\nContent-Type: multipart/mixed",
             [`${p}_bestpractice`]: "Always run a dry-run validation before bulk imports to catch constraint violations early.",
+            [`${p}_resourceurl`]: "https://make.powerapps.com/environments/contoso-dev/entities/pda_project/data",
+            [`${p}_resourcetype`]: "Table",
         },
         {
             [`${p}_activitylogid`]: "s7",
@@ -531,6 +555,8 @@ function generateSampleActivities() {
             [`${p}_why`]: "Cloud flows reference this variable for region-specific API routing.",
             [`${p}_how`]: "PATCH /api/data/v9.2/environmentvariabledefinitions(...)",
             [`${p}_bestpractice`]: "Use environment variables instead of hard-coded values so flows adapt across environments.",
+            [`${p}_resourceurl`]: "https://make.powerapps.com/environments/contoso-dev/solutions/ProjectTracker/environmentvariables",
+            [`${p}_resourcetype`]: "Environment Variable",
         },
     ];
 }
