@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dataverse Activity Dashboard</title>
+
+    <!-- Fluent UI Web Components -->
+    <script type="module" src="https://unpkg.com/@fluentui/web-components@2.6.1"></script>
+    <!-- MSAL Browser for OAuth -->
+    <script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
+
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-left">
+                <svg class="logo" width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="28" height="28" rx="4" fill="#0078D4"/>
+                    <path d="M7 8h6v6H7V8zm8 0h6v6h-6V8zM7 16h6v6H7v-6zm8 0h6v6h-6v-6z" fill="white" opacity="0.9"/>
+                </svg>
+                <h1>Activity Dashboard</h1>
+            </div>
+            <div class="header-right">
+                <div id="env-badge" class="env-badge" style="display:none;"></div>
+                <div id="user-info" style="display:none;">
+                    <span id="user-name"></span>
+                </div>
+                <fluent-button id="btn-login" appearance="accent">Sign In</fluent-button>
+                <fluent-button id="btn-logout" appearance="subtle" style="display:none;">Sign Out</fluent-button>
+            </div>
+        </header>
+
+        <!-- Setup Panel (shown before config) -->
+        <div id="setup-panel" class="setup-panel">
+            <div class="setup-card">
+                <h2>Connect to Dataverse</h2>
+                <p>Enter your Azure AD app registration details and Dataverse environment URL to get started.</p>
+
+                <div class="form-group">
+                    <fluent-text-field id="input-client-id" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" style="width:100%;">
+                        Client ID (Application ID)
+                    </fluent-text-field>
+                </div>
+                <div class="form-group">
+                    <fluent-text-field id="input-tenant-id" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" style="width:100%;">
+                        Tenant ID
+                    </fluent-text-field>
+                </div>
+                <div class="form-group">
+                    <fluent-text-field id="input-dataverse-url" placeholder="https://yourorg.crm.dynamics.com" style="width:100%;">
+                        Dataverse Environment URL
+                    </fluent-text-field>
+                </div>
+                <div class="form-group">
+                    <fluent-text-field id="input-prefix" placeholder="pda" style="width:100%;">
+                        Publisher Prefix
+                    </fluent-text-field>
+                </div>
+
+                <div class="form-actions">
+                    <fluent-button id="btn-save-config" appearance="accent">Save &amp; Connect</fluent-button>
+                </div>
+
+                <div class="setup-note">
+                    <strong>Note:</strong> Your app registration needs <code>Dynamics CRM user_impersonation</code> API permission
+                    and a <strong>SPA</strong> redirect URI matching this site's URL
+                    (e.g. <code id="current-redirect-uri">loading...</code>).
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Dashboard (shown after auth) -->
+        <div id="dashboard" class="dashboard" style="display:none;">
+            <!-- Toolbar -->
+            <div class="toolbar">
+                <div class="toolbar-left">
+                    <fluent-text-field id="search-input" placeholder="Search activities..." style="width:300px;">
+                    </fluent-text-field>
+                    <fluent-select id="filter-category" style="min-width:180px;">
+                        <fluent-option value="">All Categories</fluent-option>
+                        <fluent-option value="100000000">Schema Change</fluent-option>
+                        <fluent-option value="100000001">Cloud Flow</fluent-option>
+                        <fluent-option value="100000002">Solution Operation</fluent-option>
+                        <fluent-option value="100000003">Security</fluent-option>
+                        <fluent-option value="100000004">Configuration</fluent-option>
+                        <fluent-option value="100000005">Data Migration</fluent-option>
+                        <fluent-option value="100000006">Other</fluent-option>
+                    </fluent-select>
+                    <fluent-select id="filter-status" style="min-width:150px;">
+                        <fluent-option value="">All Statuses</fluent-option>
+                        <fluent-option value="100000000">Completed</fluent-option>
+                        <fluent-option value="100000001">In Progress</fluent-option>
+                        <fluent-option value="100000002">Failed</fluent-option>
+                    </fluent-select>
+                </div>
+                <div class="toolbar-right">
+                    <fluent-button id="btn-refresh" appearance="subtle">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M14 8a6 6 0 11-1.06-3.39l.7-.71A7 7 0 108 15a6.97 6.97 0 005.74-3H13a6 6 0 01-5 2.68A5.68 5.68 0 012.32 8H0a8 8 0 008 8 8 8 0 006-2.69V16h1V11h-5v1h3.39A6.96 6.96 0 0114 8z"/></svg>
+                        Refresh
+                    </fluent-button>
+                </div>
+            </div>
+
+            <!-- Stats Bar -->
+            <div class="stats-bar">
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-total">-</div>
+                    <div class="stat-label">Total Actions</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-sessions">-</div>
+                    <div class="stat-label">Sessions</div>
+                </div>
+                <div class="stat-card stat-completed">
+                    <div class="stat-value" id="stat-completed">-</div>
+                    <div class="stat-label">Completed</div>
+                </div>
+                <div class="stat-card stat-failed">
+                    <div class="stat-value" id="stat-failed">-</div>
+                    <div class="stat-label">Failed</div>
+                </div>
+            </div>
+
+            <!-- Activity Timeline -->
+            <div class="timeline-container">
+                <div id="activity-list" class="activity-list">
+                    <!-- Activities loaded here -->
+                </div>
+                <div id="loading-spinner" class="loading" style="display:none;">
+                    <fluent-progress-ring></fluent-progress-ring>
+                    <span>Loading activities...</span>
+                </div>
+                <div id="empty-state" class="empty-state" style="display:none;">
+                    <svg width="64" height="64" viewBox="0 0 64 64" fill="none"><rect x="8" y="12" width="48" height="40" rx="4" stroke="#C4C4C4" stroke-width="2" fill="none"/><line x1="16" y1="24" x2="48" y2="24" stroke="#C4C4C4" stroke-width="2"/><line x1="16" y1="32" x2="40" y2="32" stroke="#E0E0E0" stroke-width="2"/><line x1="16" y1="40" x2="36" y2="40" stroke="#E0E0E0" stroke-width="2"/></svg>
+                    <h3>No activities yet</h3>
+                    <p>Actions taken by the AI agent will appear here with full traceability.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Activity Detail Dialog -->
+    <fluent-dialog id="detail-dialog" hidden trap-focus>
+        <div id="detail-content" class="detail-content">
+            <!-- Populated by JS -->
+        </div>
+    </fluent-dialog>
+
+    <script src="app.js"></script>
+</body>
+</html>
