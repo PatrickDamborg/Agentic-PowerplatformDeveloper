@@ -360,6 +360,59 @@ body {
     color: var(--colorPaletteRedForeground1);
 }
 
+/* ===== Resource Links ===== */
+.resource-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: var(--fontWeightSemibold);
+    text-decoration: none;
+    background: #E8F0FE;
+    color: var(--colorBrandBackground);
+    transition: background 0.15s ease, color 0.15s ease;
+    white-space: nowrap;
+}
+
+.resource-link:hover {
+    background: var(--colorBrandBackground);
+    color: #fff;
+}
+
+.detail-title-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--spacingHorizontalM);
+    margin-bottom: var(--spacingVerticalS);
+}
+
+.detail-resource-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 16px;
+    border-radius: 6px;
+    font-size: var(--fontSizeBase300);
+    font-weight: var(--fontWeightSemibold);
+    text-decoration: none;
+    background: var(--colorBrandBackground);
+    color: #fff;
+    transition: background 0.15s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.detail-resource-link:hover {
+    background: var(--colorBrandBackgroundHover);
+}
+
+.detail-resource-link svg {
+    fill: #fff;
+}
+
 .card-summary {
     color: var(--colorNeutralForeground2);
     font-size: var(--fontSizeBase300);
@@ -406,7 +459,7 @@ fluent-dialog::part(control) {
 .detail-title {
     font-size: var(--fontSizeBase600);
     font-weight: var(--fontWeightSemibold);
-    margin-bottom: var(--spacingVerticalS);
+    flex: 1;
 }
 
 .detail-meta {
