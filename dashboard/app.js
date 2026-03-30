@@ -49,6 +49,7 @@ let accessToken = null;
 let config = null;
 let allActivities = [];
 let previewMode = false;
+let activeCategory = "";
 
 // ============================================================
 // Config persistence
@@ -388,7 +389,7 @@ async function loadActivities() {
     spinner.style.display = "";
     list.innerHTML = "";
 
-    const categoryFilter = document.getElementById("filter-category")?.value || "";
+    const categoryFilter = activeCategory;
     const statusFilter = document.getElementById("filter-status")?.value || "";
     const searchValue = document.getElementById("search-input")?.value || "";
 
@@ -402,6 +403,11 @@ async function loadActivities() {
     spinner.style.display = "none";
     renderActivities(allActivities);
     updateStats(allActivities);
+
+    // Update tab counts with unfiltered data (only on initial/refresh load)
+    if (!categoryFilter && !statusFilter && !searchValue) {
+        updateTabCounts(allActivities);
+    }
 }
 
 // ============================================================
@@ -561,6 +567,40 @@ function generateSampleActivities() {
     ];
 }
 
+function updateTabCounts(activities) {
+    const p = config.prefix.toLowerCase();
+    const tabs = document.querySelectorAll(".filter-tab");
+    tabs.forEach((tab) => {
+        const cat = tab.dataset.category;
+        let count;
+        if (cat === "") {
+            count = activities.length;
+        } else {
+            count = activities.filter((a) => String(a[`${p}_category`]) === cat).length;
+        }
+        let countEl = tab.querySelector(".tab-count");
+        if (!countEl) {
+            countEl = document.createElement("span");
+            countEl.className = "tab-count";
+            tab.appendChild(countEl);
+        }
+        countEl.textContent = count;
+        // Hide tabs with zero count (except "All")
+        if (cat !== "" && count === 0) {
+            tab.style.display = "none";
+        } else {
+            tab.style.display = "";
+        }
+    });
+}
+
+function setActiveTab(category) {
+    activeCategory = category;
+    document.querySelectorAll(".filter-tab").forEach((tab) => {
+        tab.classList.toggle("active", tab.dataset.category === category);
+    });
+}
+
 function enterPreviewMode() {
     previewMode = true;
     config = { clientId: "", tenantId: "", dataverseUrl: "https://contoso-dev.crm.dynamics.com", prefix: "demo" };
@@ -574,9 +614,11 @@ function enterPreviewMode() {
     document.getElementById("user-info").style.display = "";
     document.getElementById("user-name").textContent = "Preview User";
 
-    allActivities = generateSampleActivities();
+    const all = generateSampleActivities();
+    allActivities = all;
     renderActivities(allActivities);
     updateStats(allActivities);
+    updateTabCounts(all);
 }
 
 function exitPreviewMode() {
@@ -683,7 +725,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Filters — in preview mode, filter the sample data client-side
     const handleFilter = () => {
         if (previewMode) {
-            const cat = document.getElementById("filter-category").value;
+            const cat = activeCategory;
             const st = document.getElementById("filter-status").value;
             const q = (document.getElementById("search-input").value || "").toLowerCase();
             const p = config.prefix.toLowerCase();
@@ -698,7 +740,15 @@ document.addEventListener("DOMContentLoaded", () => {
             loadActivities();
         }
     };
-    document.getElementById("filter-category").addEventListener("change", handleFilter);
+
+    // Category tabs
+    document.getElementById("filter-tabs").addEventListener("click", (e) => {
+        const tab = e.target.closest(".filter-tab");
+        if (!tab) return;
+        setActiveTab(tab.dataset.category);
+        handleFilter();
+    });
+
     document.getElementById("filter-status").addEventListener("change", handleFilter);
     document.getElementById("search-input").addEventListener("input", debounce(handleFilter, 400));
     document.getElementById("btn-refresh").addEventListener("click", handleFilter);
