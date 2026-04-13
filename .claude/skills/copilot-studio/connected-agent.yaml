@@ -1,0 +1,42 @@
+# Copilot Studio connected (child) agent — reusable XPM template
+#
+# ILLUSTRATIVE scaffold — see orchestrator-agent.yaml for the schema caveat.
+#
+# Substitute:
+#   <prefix>      Publisher prefix confirmed by the user
+#   <role>        risk_analyst | status_reporting | project_summarization | …
+#   <DisplayName> Human-readable name shown in Copilot Studio
+
+name: <prefix>_xpm_<role>
+displayName: <DisplayName>
+description: >-
+  One-sentence description of the agent's domain and when the orchestrator
+  should route to it. The orchestrator matches on this string, so keep it
+  concrete and verb-led (e.g. "Handles risks: identification, scoring,
+  mitigation, logging"). Avoid generic adjectives.
+
+instructions: |
+  You are the <DisplayName>. Your responsibilities are:
+  - <bullet 1: the primary domain verb>
+  - <bullet 2: secondary responsibilities>
+  - <bullet 3: what you do NOT handle — route back to the orchestrator>
+
+  When the user asks for something outside your domain, respond with a brief
+  note and ask the orchestrator to re-route.
+
+tools:
+  # Populate from the tool fragment templates in this skill folder:
+  #   tool-dataverse-searchquery.yaml
+  #   tool-dataverse-listrows.yaml
+  #   tool-flow-agent-action.yaml
+  # Every tool MUST carry a description; validate-yaml.ps1 enforces this.
+  []
+
+knowledge:
+  # Optional: point at internal docs that back the agent's domain language.
+  []
+
+topics:
+  # Most connected agents need only a Fallback topic so generative orchestration
+  # drives behaviour. Author domain-specific topics with /copilot-studio:copilot-studio-author.
+  []

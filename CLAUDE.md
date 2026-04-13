@@ -28,6 +28,7 @@ Domain knowledge lives in `.claude/skills/`. Load the relevant skill before star
 | `data-model` | Creating or modifying tables, columns, lookups, relationships |
 | `model-router` | Spawning sub-agents via the Agent tool |
 | `power-automate` | Building or modifying cloud flows |
+| `copilot-studio` | Building or modifying Copilot Studio agents, connected agents, or agent tools (Dataverse searchQuery, List rows, Power Automate flows) |
 | `microsoft-learn` | Deciding which Microsoft Learn MCP tool to use |
 | `deploy` | Deploying changes to GitHub |
 | `git-push` | Staging, committing, and pushing to remote |

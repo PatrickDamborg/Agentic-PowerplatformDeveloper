@@ -1,0 +1,234 @@
+{
+  "properties": {
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "triggers": {
+        "When_Copilot_Studio_calls_a_flow": {
+          "type": "OpenApiConnection",
+          "kind": "PowerVirtualAgents",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_logicflows",
+              "operationId": "Run_a_flow_from_Microsoft_Copilot_Studio",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_logicflows"
+            },
+            "parameters": {
+              "schema": {
+                "type": "object",
+                "required": ["projectId"],
+                "properties": {
+                  "projectId": {
+                    "title": "Project id",
+                    "type": "string",
+                    "description": "GUID of the pum_project to report on.",
+                    "x-ms-agent-required": true
+                  },
+                  "asOfDate": {
+                    "title": "As-of date",
+                    "type": "string",
+                    "description": "ISO date the report is anchored to. Defaults to today if omitted."
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "actions": {
+        "Try_Scope": {
+          "type": "Scope",
+          "runAfter": {},
+          "actions": {
+            "Resolve_AsOfDate": {
+              "type": "Compose",
+              "runAfter": {},
+              "inputs": "@if(empty(triggerBody()?['asOfDate']), utcNow(), triggerBody()?['asOfDate'])"
+            },
+            "Get_Project": {
+              "type": "OpenApiConnection",
+              "runAfter": {
+                "Resolve_AsOfDate": ["Succeeded"]
+              },
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "GetItem",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "pum_projects",
+                  "recordId": "@triggerBody()?['projectId']",
+                  "$select": "pum_name,pum_startdate,pum_enddate,_pum_projectmanager_value"
+                }
+              }
+            },
+            "List_Milestones": {
+              "type": "OpenApiConnection",
+              "runAfter": {
+                "Get_Project": ["Succeeded"]
+              },
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "pum_milestones",
+                  "$filter": "_pum_project_value eq @{triggerBody()?['projectId']}",
+                  "$select": "pum_name,pum_duedate,pum_status,pum_completedate",
+                  "$orderby": "pum_duedate asc"
+                }
+              }
+            },
+            "Compute_Overdue_Count": {
+              "type": "Compose",
+              "runAfter": {
+                "List_Milestones": ["Succeeded"]
+              },
+              "inputs": "@length(filter(outputs('List_Milestones')?['body/value'], item()?['pum_status'] ne 'Complete' and item()?['pum_duedate'] < outputs('Resolve_AsOfDate')))"
+            },
+            "Compute_RAG": {
+              "type": "Compose",
+              "runAfter": {
+                "Compute_Overdue_Count": ["Succeeded"]
+              },
+              "inputs": "@if(greaterOrEquals(outputs('Compute_Overdue_Count'), 2), 'RED', if(equals(outputs('Compute_Overdue_Count'), 1), 'AMBER', 'GREEN'))"
+            },
+            "Compose_Narrative": {
+              "type": "Compose",
+              "runAfter": {
+                "Compute_RAG": ["Succeeded"]
+              },
+              "inputs": "@concat('Project ', outputs('Get_Project')?['body/pum_name'], ' is ', outputs('Compute_RAG'), '. ', string(outputs('Compute_Overdue_Count')), ' milestone(s) overdue as of ', formatDateTime(outputs('Resolve_AsOfDate'), 'yyyy-MM-dd'), '.')"
+            },
+            "Compose_MilestoneSummary": {
+              "type": "Select",
+              "runAfter": {
+                "Compose_Narrative": ["Succeeded"]
+              },
+              "inputs": {
+                "from": "@outputs('List_Milestones')?['body/value']",
+                "select": {
+                  "milestoneName": "@item()?['pum_name']",
+                  "dueDate": "@item()?['pum_duedate']",
+                  "status": "@item()?['pum_status']"
+                }
+              }
+            },
+            "Compose_Success_Payload": {
+              "type": "Compose",
+              "runAfter": {
+                "Compose_MilestoneSummary": ["Succeeded"]
+              },
+              "inputs": {
+                "rag": "@outputs('Compute_RAG')",
+                "narrative": "@outputs('Compose_Narrative')",
+                "milestoneSummary": "@body('Compose_MilestoneSummary')"
+              }
+            },
+            "Respond_to_Copilot": {
+              "type": "OpenApiConnectionWebhookResponse",
+              "runAfter": {
+                "Compose_Success_Payload": ["Succeeded"]
+              },
+              "inputs": {
+                "body": "@outputs('Compose_Success_Payload')",
+                "statusCode": 200,
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "rag": {
+                      "type": "string",
+                      "description": "Overall project RAG: GREEN, AMBER, or RED."
+                    },
+                    "narrative": {
+                      "type": "string",
+                      "description": "Exec-tone sentence summarising project status and overdue milestone count."
+                    },
+                    "milestoneSummary": {
+                      "type": "array",
+                      "description": "Array of milestone objects: milestoneName, dueDate, status."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "Catch_Scope": {
+          "type": "Scope",
+          "runAfter": {
+            "Try_Scope": ["Failed", "TimedOut"]
+          },
+          "actions": {
+            "Compose_Error_Details": {
+              "type": "Compose",
+              "runAfter": {},
+              "inputs": {
+                "flowName": "@workflow()?['tags']['flowDisplayName']",
+                "runId": "@workflow()?['run']['name']",
+                "errorResult": "@result('Try_Scope')",
+                "timestamp": "@utcNow()"
+              }
+            },
+            "Log_Error_Row": {
+              "type": "OpenApiConnection",
+              "runAfter": {
+                "Compose_Error_Details": ["Succeeded"]
+              },
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "CreateRecord",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "pum_activitylogs",
+                  "item/pum_category": "CopilotSkill",
+                  "item/pum_details": "@{string(outputs('Compose_Error_Details'))}"
+                }
+              }
+            },
+            "Respond_to_Copilot_With_Error": {
+              "type": "OpenApiConnectionWebhookResponse",
+              "runAfter": {
+                "Log_Error_Row": ["Succeeded", "Failed", "TimedOut", "Skipped"]
+              },
+              "inputs": {
+                "body": {
+                  "status": "error",
+                  "message": "Could not generate the status report. Check the activity log."
+                },
+                "statusCode": 500,
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "string", "description": "Always 'error' on this path." },
+                    "message": { "type": "string", "description": "Human-readable error summary." }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "connectionName": "REPLACE_WITH_CONNECTION_NAME",
+        "source": "Embedded",
+        "id": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+        "tier": "NotSpecified"
+      },
+      "shared_logicflows": {
+        "connectionName": "REPLACE_WITH_LOGICFLOWS_CONNECTION",
+        "source": "Embedded",
+        "id": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
+        "tier": "NotSpecified"
+      }
+    }
+  },
+  "_comment": "Skill: generate a RAG-coloured status report for a project. RAG rule lives in the Compute_RAG Compose (>=2 overdue = RED; 1 overdue = AMBER; else GREEN). Replace the threshold with an environment variable via create-env-variable.ps1 before production. Verify pum_milestones fields against schema-dump.json before deploy."
+}

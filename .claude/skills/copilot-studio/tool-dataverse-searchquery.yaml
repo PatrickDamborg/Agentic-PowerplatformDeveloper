@@ -1,0 +1,64 @@
+# Tool fragment — Dataverse `searchQuery` unbound action
+#
+# Paste under the `tools:` key of a connected-agent YAML. Substitute:
+#   <ToolName>          Machine name, kebab-case (e.g. search-risks)
+#   <DisplayName>       Human-readable name (e.g. "Search risks")
+#   <TableLogicalName>  Verified via schema-dump.ps1 (e.g. pum_risk)
+#   <SearchColumns>     JSON array of columns fuzzy-matched (e.g. ["pum_name","pum_description"])
+#   <SelectColumns>     JSON array of columns returned (e.g. ["pum_name","pum_probability","pum_impact"])
+#   <DataverseUrl>      https://<org>.crm.dynamics.com (no trailing slash, NO /api/data/v9.2)
+
+- name: <ToolName>
+  displayName: <DisplayName>
+  type: dataverse.unboundAction
+  description: >-
+    Fuzzy keyword search over <TableLogicalName>. Use when the user asks to
+    find records by description, name, or any free text. Returns the columns
+    listed below. Copilot fills the `search` parameter automatically from the
+    user's utterance.
+
+  connection:
+    reference: shared_commondataserviceforapps
+    authentication: makerProvidedCredentials   # zero end-user auth (service principal)
+
+  inputs:
+    - name: environment
+      description: Dataverse environment base URL — do not change unless porting to a new tenant.
+      type: string
+      required: true
+      defaultValue: <DataverseUrl>
+
+    - name: actionName
+      description: Literal string "searchquery" — the Dataverse unbound action name.
+      type: string
+      required: true
+      defaultValue: searchquery
+
+    - name: entities
+      description: >-
+        JSON array describing which tables to search, which columns fuzzy-match,
+        and which columns to return. Do not edit without updating the agent
+        description.
+      type: json
+      required: true
+      defaultValue: |
+        [
+          {
+            "Name": "<TableLogicalName>",
+            "SearchColumns": <SearchColumns>,
+            "SelectColumns": <SelectColumns>
+          }
+        ]
+
+    - name: search
+      description: Free-text keywords from the user. Copilot fills this at runtime.
+      type: string
+      required: true
+      dynamic: true
+
+  outputs:
+    - name: value
+      description: >-
+        Array of ranked matches. Each element contains the columns listed in
+        SelectColumns plus a relevance score.
+      type: array

@@ -1,0 +1,169 @@
+{
+  "properties": {
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "triggers": {
+        "When_Copilot_Studio_calls_a_flow": {
+          "type": "OpenApiConnection",
+          "kind": "PowerVirtualAgents",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_logicflows",
+              "operationId": "Run_a_flow_from_Microsoft_Copilot_Studio",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_logicflows"
+            },
+            "parameters": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "REPLACE_WITH_INPUT_NAME": {
+                    "title": "REPLACE_WITH_INPUT_TITLE",
+                    "type": "string",
+                    "description": "REPLACE_WITH_INPUT_DESCRIPTION — natural language; Copilot uses this to fill the parameter from the utterance.",
+                    "x-ms-agent-required": true
+                  }
+                },
+                "required": ["REPLACE_WITH_INPUT_NAME"]
+              }
+            }
+          }
+        }
+      },
+      "actions": {
+        "Try_Scope": {
+          "type": "Scope",
+          "runAfter": {},
+          "actions": {
+            "Resolve_Schema_First": {
+              "type": "Compose",
+              "runAfter": {},
+              "inputs": "Run schema-dump.ps1 and substitute the Dataverse action below. Delete this Compose once real actions are in place."
+            },
+            "Dataverse_Action": {
+              "type": "OpenApiConnection",
+              "runAfter": {
+                "Resolve_Schema_First": ["Succeeded"]
+              },
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "CreateRecord",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "REPLACE_WITH_ENTITY_SET_NAME",
+                  "item/REPLACE_WITH_COLUMN": "@triggerBody()?['REPLACE_WITH_INPUT_NAME']"
+                }
+              }
+            },
+            "Compose_Success_Payload": {
+              "type": "Compose",
+              "runAfter": {
+                "Dataverse_Action": ["Succeeded"]
+              },
+              "inputs": {
+                "recordId": "@outputs('Dataverse_Action')?['body/REPLACE_WITH_PRIMARY_ID']",
+                "status": "ok"
+              }
+            },
+            "Respond_to_Copilot": {
+              "type": "OpenApiConnectionWebhookResponse",
+              "runAfter": {
+                "Compose_Success_Payload": ["Succeeded"]
+              },
+              "inputs": {
+                "body": "@outputs('Compose_Success_Payload')",
+                "statusCode": 200,
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "recordId": {
+                      "type": "string",
+                      "description": "Primary key of the record the flow created or updated."
+                    },
+                    "status": {
+                      "type": "string",
+                      "description": "Operation outcome; 'ok' on success, 'error' on catch path."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "Catch_Scope": {
+          "type": "Scope",
+          "runAfter": {
+            "Try_Scope": ["Failed", "TimedOut"]
+          },
+          "actions": {
+            "Compose_Error_Details": {
+              "type": "Compose",
+              "runAfter": {},
+              "inputs": {
+                "flowName": "@workflow()?['tags']['flowDisplayName']",
+                "runId": "@workflow()?['run']['name']",
+                "errorResult": "@result('Try_Scope')",
+                "timestamp": "@utcNow()"
+              }
+            },
+            "Log_Error_Row": {
+              "type": "OpenApiConnection",
+              "runAfter": {
+                "Compose_Error_Details": ["Succeeded"]
+              },
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "CreateRecord",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "pum_activitylogs",
+                  "item/pum_category": "CopilotSkill",
+                  "item/pum_details": "@{string(outputs('Compose_Error_Details'))}"
+                }
+              }
+            },
+            "Respond_to_Copilot_With_Error": {
+              "type": "OpenApiConnectionWebhookResponse",
+              "runAfter": {
+                "Log_Error_Row": ["Succeeded", "Failed", "TimedOut", "Skipped"]
+              },
+              "inputs": {
+                "body": {
+                  "status": "error",
+                  "message": "The skill failed. The orchestrator should acknowledge and route to the fallback topic."
+                },
+                "statusCode": 500,
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "string", "description": "Always 'error' on this path." },
+                    "message": { "type": "string", "description": "Human-readable error summary." }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "connectionName": "REPLACE_WITH_CONNECTION_NAME",
+        "source": "Embedded",
+        "id": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+        "tier": "NotSpecified"
+      },
+      "shared_logicflows": {
+        "connectionName": "REPLACE_WITH_LOGICFLOWS_CONNECTION",
+        "source": "Embedded",
+        "id": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
+        "tier": "NotSpecified"
+      }
+    }
+  },
+  "_comment": "XPM Copilot Studio skill template. Trigger: Copilot Studio. Shape: Try scope (Dataverse op + Compose success + Respond to Copilot) → Catch scope (log to pum_activitylog + Respond with error). Every REPLACE_WITH_* token must be resolved against live schema (schema-dump.ps1) before deployment. Every input and every output property must carry a `description` — validate-yaml.ps1 enforces it."
+}
