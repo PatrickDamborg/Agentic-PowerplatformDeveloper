@@ -17,11 +17,16 @@
       "Bash(powershell.exe -File \"C:/Users/patri/Agentic-powerplatform-Dev/add-member-lookup.ps1\")",
       "Bash(pwsh -Command \":*)",
       "Bash(pwsh -Command \"& ''./flows/update-flow.ps1'' -FlowId ''563f5f64-b426-f111-8342-7c1e5221480b'' -DefinitionPath ''./flows/risk-100-create-task.json'' -Activate\")",
-      "Bash(pwsh scripts/deploy.ps1 -CommitMessage \"Add deploy skill, flow agents, and helper scripts\")"
+      "Bash(pwsh scripts/deploy.ps1 -CommitMessage \"Add deploy skill, flow agents, and helper scripts\")",
+      "Bash(pwsh:*)",
+      "Bash(git add:*)"
     ]
   },
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "microsoft-learn"
-  ]
+  ],
+  "enabledPlugins": {
+    "copilot-studio@skills-for-copilot-studio": true
+  }
 }
