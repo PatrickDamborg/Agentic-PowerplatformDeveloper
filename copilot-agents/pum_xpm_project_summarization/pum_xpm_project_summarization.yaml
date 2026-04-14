@@ -1,0 +1,174 @@
+# Project Summarization — connected agent
+# Produces narrative summaries by combining searchQuery + List rows + native generation.
+# No flow initially — add one only if generation quality is insufficient.
+
+name: pum_xpm_project_summarization
+displayName: Project Summarization
+description: >-
+  Produces narrative summaries of XPM projects for stakeholder updates. Use
+  when the user wants prose describing progress, context, and outlook — not
+  a structured report. Reads pum_project, pum_milestone, and pum_risk.
+
+instructions: |
+  You are the Project Summarization agent.
+
+  Process for every request:
+  1. Resolve the project name to an id using search-projects.
+  2. Pull project metadata with get-project.
+  3. Pull milestone and risk context with list-milestones-for-project and
+     list-risks-for-project.
+  4. Produce a 3-paragraph narrative:
+     - Paragraph 1: project purpose and current phase
+     - Paragraph 2: what has happened since the project started / last update
+     - Paragraph 3: outlook — upcoming milestones and top risks
+
+  Tone: stakeholder-appropriate. No bullet points. No jargon. Never invent a
+  milestone or risk — cite only what the tools returned.
+
+  Do NOT handle risk scoring or RAG reports. If asked, reply briefly and ask
+  the orchestrator to re-route.
+
+tools:
+  - name: search-projects
+    displayName: Search projects
+    type: dataverse.unboundAction
+    description: Fuzzy keyword search over pum_project to resolve a project name into an id.
+    connection:
+      reference: shared_commondataserviceforapps
+      authentication: makerProvidedCredentials
+    inputs:
+      - name: environment
+        description: Dataverse environment base URL.
+        type: string
+        required: true
+        defaultValue: https://REPLACE_WITH_ORG.crm.dynamics.com
+      - name: actionName
+        description: Literal string "searchquery".
+        type: string
+        required: true
+        defaultValue: searchquery
+      - name: entities
+        description: JSON array for the pum_project table.
+        type: json
+        required: true
+        defaultValue: |
+          [
+            {
+              "Name": "pum_project",
+              "SearchColumns": ["pum_name", "pum_description"],
+              "SelectColumns": ["pum_name", "pum_description", "pum_startdate", "pum_enddate"]
+            }
+          ]
+      - name: search
+        description: Free-text keywords from the user.
+        type: string
+        required: true
+        dynamic: true
+    outputs:
+      - name: value
+        description: Array of ranked project matches.
+        type: array
+
+  - name: get-project
+    displayName: Get project by id
+    type: dataverse.listRows
+    description: Returns full project metadata for a single project id.
+    connection:
+      reference: shared_commondataserviceforapps
+    inputs:
+      - name: entityName
+        description: Plural logical entity set name for projects.
+        type: string
+        required: true
+        defaultValue: pum_projects
+      - name: $filter
+        description: Filter by pum_projectid. Expects @{parameters('projectId')}.
+        type: string
+        required: true
+        defaultValue: pum_projectid eq @{parameters('projectId')}
+      - name: $select
+        description: Columns needed for the narrative.
+        type: string
+        required: true
+        defaultValue: pum_name,pum_description,pum_startdate,pum_enddate,_pum_projectmanager_value
+      - name: $top
+        description: Maximum rows.
+        type: integer
+        required: false
+        defaultValue: 1
+    outputs:
+      - name: value
+        description: Single-element array with the project record.
+        type: array
+
+  - name: list-milestones-for-project
+    displayName: List milestones for a project
+    type: dataverse.listRows
+    description: Returns all milestones on a project — used for the outlook paragraph.
+    connection:
+      reference: shared_commondataserviceforapps
+    inputs:
+      - name: entityName
+        description: Plural logical entity set name for milestones.
+        type: string
+        required: true
+        defaultValue: pum_milestones
+      - name: $filter
+        description: Filter by project id. Expects @{parameters('projectId')}.
+        type: string
+        required: true
+        defaultValue: _pum_project_value eq @{parameters('projectId')}
+      - name: $select
+        description: Columns for the narrative.
+        type: string
+        required: true
+        defaultValue: pum_name,pum_duedate,pum_status
+      - name: $orderby
+        description: Ordering.
+        type: string
+        required: false
+        defaultValue: pum_duedate asc
+    outputs:
+      - name: value
+        description: Array of milestones.
+        type: array
+
+  - name: list-risks-for-project
+    displayName: List top risks for a project
+    type: dataverse.listRows
+    description: Returns the top open risks on a project by probability — used in the outlook paragraph.
+    connection:
+      reference: shared_commondataserviceforapps
+    inputs:
+      - name: entityName
+        description: Plural logical entity set name for risks.
+        type: string
+        required: true
+        defaultValue: pum_risks
+      - name: $filter
+        description: Open risks on a single project. Expects @{parameters('projectId')}.
+        type: string
+        required: true
+        defaultValue: statecode eq 0 and _pum_project_value eq @{parameters('projectId')}
+      - name: $select
+        description: Columns for the narrative.
+        type: string
+        required: true
+        defaultValue: pum_name,pum_probability,pum_impact
+      - name: $orderby
+        description: Ordering — highest probability first.
+        type: string
+        required: false
+        defaultValue: pum_probability desc
+      - name: $top
+        description: Cap to the top few risks.
+        type: integer
+        required: false
+        defaultValue: 5
+    outputs:
+      - name: value
+        description: Array of top risks.
+        type: array
+
+knowledge: []
+topics: []

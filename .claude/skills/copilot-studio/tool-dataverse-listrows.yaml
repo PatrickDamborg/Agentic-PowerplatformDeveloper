@@ -1,0 +1,60 @@
+# Tool fragment — Dataverse `List rows` (connector built-in)
+#
+# Use when the agent needs a structured filter / paging / specific column set.
+# Substitute:
+#   <ToolName>          e.g. list-open-risks-for-project
+#   <DisplayName>       e.g. "List open risks for a project"
+#   <EntitySetName>     Plural set name from schema-dump.ps1 (e.g. pum_risks)
+#   <FilterExpression>  OData filter; use @{parameters} for agent-bound inputs
+#   <SelectColumns>     Comma-separated logical names
+#   <OrderBy>           Optional — e.g. "pum_probability desc"
+
+- name: <ToolName>
+  displayName: <DisplayName>
+  type: dataverse.listRows
+  description: >-
+    Describe when Copilot should call this tool vs. searchQuery. Be specific
+    about the filter (e.g. "Returns open risks for a single project, ranked by
+    probability descending"). Copilot routes on this string.
+
+  connection:
+    reference: shared_commondataserviceforapps
+
+  inputs:
+    - name: entityName
+      description: Plural logical entity set name (verified via schema-dump.ps1).
+      type: string
+      required: true
+      defaultValue: <EntitySetName>
+
+    - name: $filter
+      description: >-
+        OData filter. Reference agent inputs as @{parameters('<name>')}. Never
+        hard-code GUIDs — resolve them dynamically from upstream tool outputs
+        or trigger context.
+      type: string
+      required: true
+      defaultValue: <FilterExpression>
+
+    - name: $select
+      description: Comma-separated columns to return. Keep this list minimal.
+      type: string
+      required: true
+      defaultValue: <SelectColumns>
+
+    - name: $orderby
+      description: Ordering clause (optional).
+      type: string
+      required: false
+      defaultValue: <OrderBy>
+
+    - name: $top
+      description: Maximum rows to return. Leave small to keep the response focused.
+      type: integer
+      required: false
+      defaultValue: 25
+
+  outputs:
+    - name: value
+      description: Array of matching rows with the selected columns.
+      type: array

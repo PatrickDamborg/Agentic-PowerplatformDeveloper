@@ -1,0 +1,139 @@
+# Status Reporting — connected agent
+# Produces RAG-coloured snapshots across pum_project, pum_milestone, pum_task.
+
+name: pum_xpm_status_reporting
+displayName: Status Reporting
+description: >-
+  Produces executive status reports with RAG colouring across XPM projects.
+  Use when the user wants a snapshot report combining project metadata,
+  milestone health, and task progress. Applies RAG convention
+  (Green / Amber / Red) based on milestone slip days.
+
+instructions: |
+  You are the Status Reporting agent. You produce concise, exec-tone reports.
+
+  RAG convention:
+  - GREEN  — no milestones overdue, no tasks blocked
+  - AMBER  — 1 milestone overdue OR >=2 tasks blocked
+  - RED    — 2+ milestones overdue OR a milestone overdue by more than the
+             threshold defined in the environment variable
+             pum_statusreporting_red_threshold_days
+
+  Always cite concrete milestone or task names when explaining an AMBER/RED.
+  Keep the overall narrative to 5 sentences maximum.
+
+  Do NOT handle risks, summaries, or anything outside status. If asked, reply
+  briefly and ask the orchestrator to re-route.
+
+tools:
+  - name: search-projects
+    displayName: Search projects
+    type: dataverse.unboundAction
+    description: >-
+      Fuzzy keyword search over pum_project. Use to resolve a project name
+      mentioned in the user's utterance into a concrete project id.
+    connection:
+      reference: shared_commondataserviceforapps
+      authentication: makerProvidedCredentials
+    inputs:
+      - name: environment
+        description: Dataverse environment base URL.
+        type: string
+        required: true
+        defaultValue: https://REPLACE_WITH_ORG.crm.dynamics.com
+      - name: actionName
+        description: Literal string "searchquery".
+        type: string
+        required: true
+        defaultValue: searchquery
+      - name: entities
+        description: JSON array for the pum_project table.
+        type: json
+        required: true
+        defaultValue: |
+          [
+            {
+              "Name": "pum_project",
+              "SearchColumns": ["pum_name", "pum_description"],
+              "SelectColumns": ["pum_name", "pum_projectmanager", "pum_startdate", "pum_enddate"]
+            }
+          ]
+      - name: search
+        description: Free-text keywords from the user. Copilot fills this at runtime.
+        type: string
+        required: true
+        dynamic: true
+    outputs:
+      - name: value
+        description: Array of ranked project matches.
+        type: array
+
+  - name: list-milestones-for-project
+    displayName: List milestones for a project
+    type: dataverse.listRows
+    description: >-
+      Returns all milestones on a project with due date and status. Used to
+      compute RAG colour based on slip days.
+    connection:
+      reference: shared_commondataserviceforapps
+    inputs:
+      - name: entityName
+        description: Plural logical entity set name for milestones.
+        type: string
+        required: true
+        defaultValue: pum_milestones
+      - name: $filter
+        description: Filter to milestones for a single project. Expects @{parameters('projectId')}.
+        type: string
+        required: true
+        defaultValue: _pum_project_value eq @{parameters('projectId')}
+      - name: $select
+        description: Columns needed to compute RAG and render the narrative.
+        type: string
+        required: true
+        defaultValue: pum_name,pum_duedate,pum_status,pum_completedate
+      - name: $orderby
+        description: Ordering clause.
+        type: string
+        required: false
+        defaultValue: pum_duedate asc
+    outputs:
+      - name: value
+        description: Array of milestones with selected columns.
+        type: array
+
+  - name: generate-status-report
+    displayName: Generate status report
+    type: powerAutomateFlow
+    description: >-
+      Assembles a RAG-coloured status narrative for a project. Combines
+      project metadata, milestone health, and task progress into a fixed
+      output shape. Use when the user wants a report rather than raw data.
+    flow:
+      name: pum_skill_generate_status_report
+      solution: XPMCopilotSkills
+    inputSchema:
+      type: object
+      required: ["projectId"]
+      properties:
+        projectId:
+          type: string
+          description: GUID of the pum_project. Resolve via search-projects first.
+        asOfDate:
+          type: string
+          description: ISO date for the snapshot. Defaults to today if omitted.
+    outputSchema:
+      type: object
+      properties:
+        rag:
+          type: string
+          description: One of GREEN, AMBER, or RED per the RAG convention.
+        narrative:
+          type: string
+          description: 5-sentence exec-tone narrative summarising status.
+        milestoneSummary:
+          type: array
+          description: Array of objects with milestoneName, dueDate, and status per milestone.
+
+knowledge: []
+topics: []

@@ -1,0 +1,31 @@
+# Tool fragment — Power Automate cloud flow surfaced as an agent action
+#
+# Use when the operation writes data and needs validation, computed fields, or
+# multi-step logic. The underlying flow must:
+#   - use the Copilot Studio trigger (see flow-copilot-trigger.json)
+#   - wrap logic in Try/Catch scopes
+#   - end with "Respond to Copilot" carrying a typed output schema
+#
+# Substitute:
+#   <ToolName>          e.g. create-risk
+#   <DisplayName>       e.g. "Create a risk"
+#   <FlowName>          Matches the flow's schema name (e.g. pum_skill_create_risk)
+#   <InputSchemaRef>    JSON-schema block describing inputs
+#   <OutputSchemaRef>   JSON-schema block describing outputs
+
+- name: <ToolName>
+  displayName: <DisplayName>
+  type: powerAutomateFlow
+  description: >-
+    Describe what the flow does and when Copilot should call it. Mention the
+    side effects: "Creates a pum_risk record linked to the given project and
+    returns the new risk id plus the computed score."
+
+  flow:
+    name: <FlowName>
+    solution: XPMCopilotSkills
+
+  # Input / output schemas mirror the flow's Copilot Studio trigger and Respond
+  # to Copilot action. Keep the two in sync — use validate-yaml.ps1.
+  inputSchema: <InputSchemaRef>
+  outputSchema: <OutputSchemaRef>

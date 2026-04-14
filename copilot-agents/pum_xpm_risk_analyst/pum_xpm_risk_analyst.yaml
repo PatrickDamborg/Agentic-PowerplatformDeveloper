@@ -1,0 +1,160 @@
+# Risk Analyst — connected agent
+# Owns pum_risk read + write. Escalation thresholds live in environment variables.
+# Verify any logical names or choice values against schema-dump.ps1 before deploy.
+
+name: pum_xpm_risk_analyst
+displayName: Risk Analyst
+description: >-
+  Handles risks on XPM projects. Use for identifying, scoring, mitigating, or
+  logging risks. Reads and writes the pum_risk table. Scores risks on a 1-5
+  probability × 1-5 impact scale; flags any score >= 16 as critical.
+
+instructions: |
+  You are the Risk Analyst for the XPM project and portfolio management app.
+
+  Responsibilities:
+  - Find existing risks using fuzzy keyword search (search-risks) or precise
+    filtering (list-open-risks-for-project).
+  - Log new risks using the create-risk flow. Always confirm probability (1-5)
+    and impact (1-5) before calling it.
+  - Explain risk scoring: score = probability × impact. Scores >= 16 are
+    critical and should be surfaced with a warning.
+
+  Do NOT handle status reports, project summaries, or anything outside risk.
+  If asked, reply briefly and ask the orchestrator to re-route.
+
+  Never invent risk names, project ids, or probability values — if the user is
+  vague, ask one clarifying question.
+
+tools:
+  - name: search-risks
+    displayName: Search risks
+    type: dataverse.unboundAction
+    description: >-
+      Fuzzy keyword search over pum_risk. Use when the user asks to find risks
+      by description, name, or any free text. Returns the risk name,
+      probability, impact, and owning project.
+    connection:
+      reference: shared_commondataserviceforapps
+      authentication: makerProvidedCredentials
+    inputs:
+      - name: environment
+        description: Dataverse environment base URL.
+        type: string
+        required: true
+        defaultValue: https://REPLACE_WITH_ORG.crm.dynamics.com
+      - name: actionName
+        description: Literal string "searchquery" — the Dataverse unbound action name.
+        type: string
+        required: true
+        defaultValue: searchquery
+      - name: entities
+        description: >-
+          JSON array declaring which columns on pum_risk fuzzy-match and which
+          return. Do not edit without updating this tool's description.
+        type: json
+        required: true
+        defaultValue: |
+          [
+            {
+              "Name": "pum_risk",
+              "SearchColumns": ["pum_name", "pum_description"],
+              "SelectColumns": ["pum_name", "pum_probability", "pum_impact", "_pum_project_value"]
+            }
+          ]
+      - name: search
+        description: Free-text keywords from the user. Copilot fills this at runtime.
+        type: string
+        required: true
+        dynamic: true
+    outputs:
+      - name: value
+        description: Array of ranked matches with relevance score.
+        type: array
+
+  - name: list-open-risks-for-project
+    displayName: List open risks for a project
+    type: dataverse.listRows
+    description: >-
+      Returns open risks for a single project, ordered by probability
+      descending. Use when the user asks "what are the risks on project X" and
+      project id is known (resolved via search-projects or by the orchestrator).
+    connection:
+      reference: shared_commondataserviceforapps
+    inputs:
+      - name: entityName
+        description: Plural logical entity set name for the risk table.
+        type: string
+        required: true
+        defaultValue: pum_risks
+      - name: $filter
+        description: >-
+          OData filter. Expects @{parameters('projectId')} — a GUID string with
+          no quoting. Resolves to open risks (statecode eq 0) for that project.
+        type: string
+        required: true
+        defaultValue: statecode eq 0 and _pum_project_value eq @{parameters('projectId')}
+      - name: $select
+        description: Columns to return. Keep minimal.
+        type: string
+        required: true
+        defaultValue: pum_name,pum_probability,pum_impact,pum_mitigation,_pum_project_value
+      - name: $orderby
+        description: Ordering clause.
+        type: string
+        required: false
+        defaultValue: pum_probability desc
+      - name: $top
+        description: Maximum rows to return.
+        type: integer
+        required: false
+        defaultValue: 25
+    outputs:
+      - name: value
+        description: Array of open risks with selected columns.
+        type: array
+
+  - name: create-risk
+    displayName: Create a risk
+    type: powerAutomateFlow
+    description: >-
+      Creates a new pum_risk record on a project. Computes score as
+      probability × impact. Returns the new risk id, the computed score, and a
+      deep link to the record. Use when the user wants to log a risk.
+    flow:
+      name: pum_skill_create_risk
+      solution: XPMCopilotSkills
+    inputSchema:
+      type: object
+      required: ["projectId", "title", "probability", "impact"]
+      properties:
+        projectId:
+          type: string
+          description: GUID of the pum_project the risk belongs to. Resolve via search-projects first.
+        title:
+          type: string
+          description: Short name of the risk. Stored as pum_name.
+        probability:
+          type: integer
+          description: Likelihood on a 1-5 scale. 1 = very low, 5 = near-certain.
+        impact:
+          type: integer
+          description: Business impact on a 1-5 scale. 1 = negligible, 5 = severe.
+        mitigation:
+          type: string
+          description: Optional text describing the planned mitigation. Stored as pum_mitigation.
+    outputSchema:
+      type: object
+      properties:
+        riskId:
+          type: string
+          description: GUID of the newly created pum_risk record.
+        riskScore:
+          type: integer
+          description: Computed score (probability × impact). Values >= 16 are critical.
+        riskUrl:
+          type: string
+          description: Deep link to the risk record in the model-driven app.
+
+knowledge: []
+topics: []

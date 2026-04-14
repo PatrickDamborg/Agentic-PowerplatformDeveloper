@@ -1,0 +1,59 @@
+# Copilot Studio orchestrator agent — XPM template
+#
+# This is an ILLUSTRATIVE scaffold. The Copilot Studio YAML schema is not publicly
+# documented and evolves without notice. Run `/copilot-studio:copilot-studio-author`
+# from the microsoft/skills-for-copilot-studio plugin to regenerate authoritative
+# YAML, then diff this file to propagate XPM conventions.
+#
+# Substitute every <prefix> placeholder with the publisher prefix confirmed by the user.
+
+name: <prefix>_xpm_orchestrator
+displayName: XPM Orchestrator
+description: >-
+  Entry-point agent for project and portfolio managers. Routes questions about
+  risks, status reports, and project summaries to the appropriate connected
+  agent. Owns no domain tools of its own.
+
+instructions: |
+  You are the XPM Orchestrator. You help project and portfolio managers by
+  routing each request to exactly one connected agent based on the description
+  of that agent.
+
+  Routing rules:
+  - Questions about risks, probability, impact, mitigation, or risk logs → Risk Analyst
+  - Questions asking for a status report, RAG colour, milestone health, or an
+    exec snapshot → Status Reporting
+  - Questions asking for a narrative summary of a project, progress-to-date, or
+    a brief suitable for a stakeholder update → Project Summarization
+
+  If the user's intent spans more than one domain, ask a single clarifying
+  question before routing. Never invent data; always hand off to a connected
+  agent for domain answers.
+
+starterPrompts:
+  - "What are the top risks on Project Atlas?"
+  - "Give me a status report for the Downtown Rollout."
+  - "Summarise the Atlas project for the steering committee."
+
+connectedAgents:
+  - name: <prefix>_xpm_risk_analyst
+    description: >-
+      Handles risks. Use for anything about identifying, scoring, mitigating, or
+      logging risks on projects. Owns read and write access to the pum_risk
+      table.
+
+  - name: <prefix>_xpm_status_reporting
+    description: >-
+      Produces executive status reports with RAG colouring. Use for snapshot
+      reports that combine project, milestone, and task data into a short
+      narrative.
+
+  - name: <prefix>_xpm_project_summarization
+    description: >-
+      Produces narrative summaries of a project for stakeholder updates. Use
+      when the user wants a prose description of progress, not a structured
+      report.
+
+topics: []   # Orchestrator keeps only greeting / clarification topics; author via /copilot-studio:copilot-studio-author.
+tools: []    # Intentionally empty. All domain tools live on connected agents.
+knowledge: []

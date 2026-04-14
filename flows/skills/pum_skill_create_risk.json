@@ -1,0 +1,202 @@
+{
+  "properties": {
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "triggers": {
+        "When_Copilot_Studio_calls_a_flow": {
+          "type": "OpenApiConnection",
+          "kind": "PowerVirtualAgents",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_logicflows",
+              "operationId": "Run_a_flow_from_Microsoft_Copilot_Studio",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_logicflows"
+            },
+            "parameters": {
+              "schema": {
+                "type": "object",
+                "required": ["projectId", "title", "probability", "impact"],
+                "properties": {
+                  "projectId": {
+                    "title": "Project id",
+                    "type": "string",
+                    "description": "GUID of the pum_project the risk belongs to.",
+                    "x-ms-agent-required": true
+                  },
+                  "title": {
+                    "title": "Risk title",
+                    "type": "string",
+                    "description": "Short name of the risk. Stored as pum_name.",
+                    "x-ms-agent-required": true
+                  },
+                  "probability": {
+                    "title": "Probability",
+                    "type": "integer",
+                    "description": "Likelihood on a 1-5 scale. 1 = very low, 5 = near-certain.",
+                    "x-ms-agent-required": true
+                  },
+                  "impact": {
+                    "title": "Impact",
+                    "type": "integer",
+                    "description": "Business impact on a 1-5 scale. 1 = negligible, 5 = severe.",
+                    "x-ms-agent-required": true
+                  },
+                  "mitigation": {
+                    "title": "Mitigation",
+                    "type": "string",
+                    "description": "Optional mitigation text. Stored as pum_mitigation."
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "actions": {
+        "Try_Scope": {
+          "type": "Scope",
+          "runAfter": {},
+          "actions": {
+            "Compute_Score": {
+              "type": "Compose",
+              "runAfter": {},
+              "inputs": "@mul(triggerBody()?['probability'], triggerBody()?['impact'])"
+            },
+            "Create_Risk_Record": {
+              "type": "OpenApiConnection",
+              "runAfter": {
+                "Compute_Score": ["Succeeded"]
+              },
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "CreateRecord",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "pum_risks",
+                  "item/pum_name": "@triggerBody()?['title']",
+                  "item/pum_probability": "@triggerBody()?['probability']",
+                  "item/pum_impact": "@triggerBody()?['impact']",
+                  "item/pum_score": "@outputs('Compute_Score')",
+                  "item/pum_mitigation": "@triggerBody()?['mitigation']",
+                  "item/pum_project@odata.bind": "pum_projects(@{triggerBody()?['projectId']})"
+                }
+              }
+            },
+            "Compose_Success_Payload": {
+              "type": "Compose",
+              "runAfter": {
+                "Create_Risk_Record": ["Succeeded"]
+              },
+              "inputs": {
+                "riskId": "@outputs('Create_Risk_Record')?['body/pum_riskid']",
+                "riskScore": "@outputs('Compute_Score')",
+                "riskUrl": "@concat('https://REPLACE_WITH_ORG.crm.dynamics.com/main.aspx?etn=pum_risk&pagetype=entityrecord&id=', outputs('Create_Risk_Record')?['body/pum_riskid'])"
+              }
+            },
+            "Respond_to_Copilot": {
+              "type": "OpenApiConnectionWebhookResponse",
+              "runAfter": {
+                "Compose_Success_Payload": ["Succeeded"]
+              },
+              "inputs": {
+                "body": "@outputs('Compose_Success_Payload')",
+                "statusCode": 200,
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "riskId": {
+                      "type": "string",
+                      "description": "GUID of the newly created pum_risk record."
+                    },
+                    "riskScore": {
+                      "type": "integer",
+                      "description": "Computed score (probability × impact). Values >= 16 are critical."
+                    },
+                    "riskUrl": {
+                      "type": "string",
+                      "description": "Deep link to the risk record in the model-driven app."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "Catch_Scope": {
+          "type": "Scope",
+          "runAfter": {
+            "Try_Scope": ["Failed", "TimedOut"]
+          },
+          "actions": {
+            "Compose_Error_Details": {
+              "type": "Compose",
+              "runAfter": {},
+              "inputs": {
+                "flowName": "@workflow()?['tags']['flowDisplayName']",
+                "runId": "@workflow()?['run']['name']",
+                "errorResult": "@result('Try_Scope')",
+                "timestamp": "@utcNow()"
+              }
+            },
+            "Log_Error_Row": {
+              "type": "OpenApiConnection",
+              "runAfter": {
+                "Compose_Error_Details": ["Succeeded"]
+              },
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "CreateRecord",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "pum_activitylogs",
+                  "item/pum_category": "CopilotSkill",
+                  "item/pum_details": "@{string(outputs('Compose_Error_Details'))}"
+                }
+              }
+            },
+            "Respond_to_Copilot_With_Error": {
+              "type": "OpenApiConnectionWebhookResponse",
+              "runAfter": {
+                "Log_Error_Row": ["Succeeded", "Failed", "TimedOut", "Skipped"]
+              },
+              "inputs": {
+                "body": {
+                  "status": "error",
+                  "message": "Failed to create the risk. Check the activity log for details."
+                },
+                "statusCode": 500,
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "string", "description": "Always 'error' on this path." },
+                    "message": { "type": "string", "description": "Human-readable error summary." }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "connectionName": "REPLACE_WITH_CONNECTION_NAME",
+        "source": "Embedded",
+        "id": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+        "tier": "NotSpecified"
+      },
+      "shared_logicflows": {
+        "connectionName": "REPLACE_WITH_LOGICFLOWS_CONNECTION",
+        "source": "Embedded",
+        "id": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
+        "tier": "NotSpecified"
+      }
+    }
+  },
+  "_comment": "Skill: create a pum_risk on a project. Verify pum_score and pum_impact exist in schema-dump.json before deploy. Replace REPLACE_WITH_ORG with your Dataverse host and populate REPLACE_WITH_*_CONNECTION with connection reference schema names from XPMCopilotSkills solution."
+}
