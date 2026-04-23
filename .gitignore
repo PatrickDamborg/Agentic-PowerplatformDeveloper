@@ -1,3 +1,7 @@
 .env
 .token
 schema_dump.json
+
+# Customer environment credentials and local session state
+customers/**/.env
+customers/**/session.json

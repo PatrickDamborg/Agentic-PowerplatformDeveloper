@@ -1,0 +1,5 @@
+# Credentials — never commit
+**/.env
+
+# Local session state — no customer info in git
+**/session.json

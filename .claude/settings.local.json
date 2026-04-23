@@ -2,22 +2,9 @@
   "permissions": {
     "allow": [
       "WebFetch(domain:github.com)",
-      "Bash(pwsh -File \"C:/Users/patri/Agentic-powerplatform-Dev/connect.ps1\")",
-      "Bash(\"/mnt/c/Program Files/PowerShell/7/pwsh.exe\" -File \"C:/Users/patri/Agentic-powerplatform-Dev/connect.ps1\")",
-      "Bash(powershell.exe -File \"C:/Users/patri/Agentic-powerplatform-Dev/connect.ps1\")",
-      "Bash(powershell.exe -File \"C:/Users/patri/Agentic-powerplatform-Dev/create-table.ps1\")",
-      "Bash(powershell.exe -File \"C:/Users/patri/Agentic-powerplatform-Dev/add-to-solution.ps1\")",
-      "Bash(powershell.exe -File \"C:/Users/patri/Agentic-powerplatform-Dev/add-to-ppmextension.ps1\")",
       "mcp__microsoft-learn__microsoft_docs_search",
       "mcp__microsoft-learn__microsoft_code_sample_search",
       "mcp__microsoft-learn__microsoft_docs_fetch",
-      "Bash(powershell.exe -File \"C:/Users/patri/Agentic-powerplatform-Dev/add-lookup.ps1\")",
-      "Bash(powershell.exe -File \"C:/Users/patri/Agentic-powerplatform-Dev/add-columns.ps1\")",
-      "Bash(powershell.exe -File \"C:/Users/patri/Agentic-powerplatform-Dev/find-table.ps1\")",
-      "Bash(powershell.exe -File \"C:/Users/patri/Agentic-powerplatform-Dev/add-member-lookup.ps1\")",
-      "Bash(pwsh -Command \":*)",
-      "Bash(pwsh -Command \"& ''./flows/update-flow.ps1'' -FlowId ''563f5f64-b426-f111-8342-7c1e5221480b'' -DefinitionPath ''./flows/risk-100-create-task.json'' -Activate\")",
-      "Bash(pwsh scripts/deploy.ps1 -CommitMessage \"Add deploy skill, flow agents, and helper scripts\")",
       "Bash(pwsh:*)",
       "Bash(git add:*)"
     ]
