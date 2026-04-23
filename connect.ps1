@@ -17,7 +17,7 @@ $body = @{
     grant_type    = "client_credentials"
     client_id     = $clientId
     client_secret = $clientSecret
-    scope         = "https://pdaprimary.api.crm4.dynamics.com/.default"
+    scope         = $env:DATAVERSE_SCOPE
 }
 
 try {

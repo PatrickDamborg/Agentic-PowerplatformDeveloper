@@ -10,7 +10,7 @@ $tokenResponse = Invoke-RestMethod -Method Post -Uri "https://login.microsoftonl
     grant_type    = "client_credentials"
     client_id     = $env:CLIENT_ID
     client_secret = $env:CLIENT_SECRET
-    scope         = "https://pdaprimary.api.crm4.dynamics.com/.default"
+    scope         = $env:DATAVERSE_SCOPE
 }
 
 $headers = @{
