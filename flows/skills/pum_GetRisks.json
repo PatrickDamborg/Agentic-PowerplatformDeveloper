@@ -1,0 +1,302 @@
+{
+  "schemaVersion": "1.0.0.0",
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "pum_sharedcommondataserviceforapps_1479b"
+        },
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        }
+      },
+      "shared_logicflows": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "pum_sharedlogicflows"
+        },
+        "api": {
+          "name": "shared_logicflows"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        }
+      },
+      "triggers": {
+        "When_Copilot_Studio_calls_a_flow": {
+          "type": "OpenApiConnection",
+          "kind": "PowerVirtualAgents",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_logicflows",
+              "operationId": "Run_a_flow_from_Microsoft_Copilot_Studio",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_logicflows"
+            },
+            "parameters": {
+              "schema": {
+                "type": "object",
+                "required": ["InitiativeId"],
+                "properties": {
+                  "InitiativeId": {
+                    "title": "Initiative id",
+                    "type": "string",
+                    "description": "GUID of the pum_initiative whose open risks to retrieve.",
+                    "x-ms-agent-required": true
+                  }
+                }
+              }
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        }
+      },
+      "actions": {
+        "Try_Scope": {
+          "type": "Scope",
+          "runAfter": {},
+          "actions": {
+            "List_Risks": {
+              "type": "OpenApiConnection",
+              "runAfter": {},
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "pum_risks",
+                  "$filter": "_pum_initiative_value eq @{triggerBody()?['InitiativeId']} and statecode eq 0",
+                  "$select": "pum_riskid,pum_name,pum_description,pum_probability,pum_riskimpact,createdon",
+                  "$orderby": "createdon desc",
+                  "$top": 20
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Compute_RiskCount": {
+              "type": "Compose",
+              "runAfter": {
+                "List_Risks": ["Succeeded"]
+              },
+              "inputs": "@length(body('List_Risks')?['value'])"
+            },
+            "Check_Empty": {
+              "type": "If",
+              "runAfter": {
+                "Compute_RiskCount": ["Succeeded"]
+              },
+              "expression": {
+                "equals": [
+                  "@outputs('Compute_RiskCount')",
+                  0
+                ]
+              },
+              "actions": {
+                "Compose_Empty_Payload": {
+                  "type": "Compose",
+                  "runAfter": {},
+                  "inputs": {
+                    "openRiskCount": 0,
+                    "topRisks": []
+                  }
+                },
+                "Respond_Empty": {
+                  "type": "OpenApiConnectionWebhookResponse",
+                  "runAfter": {
+                    "Compose_Empty_Payload": ["Succeeded"]
+                  },
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_logicflows",
+                      "operationId": "Response",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_logicflows"
+                    },
+                    "parameters": {
+                      "response/value": "@outputs('Compose_Empty_Payload')",
+                      "response/schema": {
+                        "type": "object",
+                        "properties": {
+                          "openRiskCount": { "type": "integer" },
+                          "topRisks": { "type": "array" }
+                        }
+                      }
+                    },
+                    "authentication": "@parameters('$authentication')"
+                  }
+                }
+              },
+              "else": {
+                "actions": {
+                  "Select_ScoredRisks": {
+                    "type": "Select",
+                    "runAfter": {},
+                    "inputs": {
+                      "from": "@body('List_Risks')?['value']",
+                      "select": {
+                        "name": "@item()?['pum_name']",
+                        "description": "@item()?['pum_description']",
+                        "createdon": "@item()?['createdon']",
+                        "probability": "@if(or(equals(item()?['pum_probability'], 976880000), equals(item()?['pum_probability'], 976880001)), 'Low', if(or(equals(item()?['pum_probability'], 976880002), equals(item()?['pum_probability'], 976880003)), 'Medium', 'High'))",
+                        "impact": "@if(or(equals(item()?['pum_riskimpact'], 976880000), equals(item()?['pum_riskimpact'], 976880001)), 'Low', if(equals(item()?['pum_riskimpact'], 976880002), 'Medium', 'High'))",
+                        "score": "@mul(if(or(equals(item()?['pum_probability'], 976880000), equals(item()?['pum_probability'], 976880001)), 1, if(or(equals(item()?['pum_probability'], 976880002), equals(item()?['pum_probability'], 976880003)), 2, 3)), if(or(equals(item()?['pum_riskimpact'], 976880000), equals(item()?['pum_riskimpact'], 976880001)), 1, if(equals(item()?['pum_riskimpact'], 976880002), 2, 3)))"
+                      }
+                    }
+                  },
+                  "Sort_And_Cap_Risks": {
+                    "type": "Compose",
+                    "runAfter": {
+                      "Select_ScoredRisks": ["Succeeded"]
+                    },
+                    "inputs": "@take(sort(body('Select_ScoredRisks'), 'score', 'desc'), 5)"
+                  },
+                  "Select_TopRisks_Output": {
+                    "type": "Select",
+                    "runAfter": {
+                      "Sort_And_Cap_Risks": ["Succeeded"]
+                    },
+                    "inputs": {
+                      "from": "@outputs('Sort_And_Cap_Risks')",
+                      "select": {
+                        "name": "@item()?['name']",
+                        "probability": "@item()?['probability']",
+                        "impact": "@item()?['impact']",
+                        "score": "@item()?['score']",
+                        "description": "@item()?['description']"
+                      }
+                    }
+                  },
+                  "Compose_Success_Payload": {
+                    "type": "Compose",
+                    "runAfter": {
+                      "Select_TopRisks_Output": ["Succeeded"]
+                    },
+                    "inputs": {
+                      "openRiskCount": "@outputs('Compute_RiskCount')",
+                      "topRisks": "@body('Select_TopRisks_Output')"
+                    }
+                  },
+                  "Respond_to_Copilot": {
+                    "type": "OpenApiConnectionWebhookResponse",
+                    "runAfter": {
+                      "Compose_Success_Payload": ["Succeeded"]
+                    },
+                    "inputs": {
+                      "host": {
+                        "connectionName": "shared_logicflows",
+                        "operationId": "Response",
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_logicflows"
+                      },
+                      "parameters": {
+                        "response/value": "@outputs('Compose_Success_Payload')",
+                        "response/schema": {
+                          "type": "object",
+                          "properties": {
+                            "openRiskCount": { "type": "integer", "description": "Total open risks (up to 20 retrieved)." },
+                            "topRisks": {
+                              "type": "array",
+                              "description": "Top 5 risks by score descending. Score = probability_score x impact_score (max 9).",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "name": { "type": "string" },
+                                  "probability": { "type": "string", "description": "Low, Medium, or High." },
+                                  "impact": { "type": "string", "description": "Low, Medium, or High." },
+                                  "score": { "type": "integer" },
+                                  "description": { "type": "string" }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "authentication": "@parameters('$authentication')"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "Catch_Scope": {
+          "type": "Scope",
+          "runAfter": {
+            "Try_Scope": ["Failed", "TimedOut"]
+          },
+          "actions": {
+            "Compose_Error_Details": {
+              "type": "Compose",
+              "runAfter": {},
+              "inputs": {
+                "flowName": "@workflow()?['tags']['flowDisplayName']",
+                "runId": "@workflow()?['run']['name']",
+                "errorResult": "@result('Try_Scope')",
+                "timestamp": "@utcNow()"
+              }
+            },
+            "Log_Error_Row": {
+              "type": "OpenApiConnection",
+              "runAfter": {
+                "Compose_Error_Details": ["Succeeded"]
+              },
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "CreateRecord",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "pum_activitylogs",
+                  "item/pum_category": "CopilotSkill",
+                  "item/pum_details": "@{string(outputs('Compose_Error_Details'))}"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Respond_to_Copilot_With_Error": {
+              "type": "OpenApiConnectionWebhookResponse",
+              "runAfter": {
+                "Log_Error_Row": ["Succeeded", "Failed", "TimedOut", "Skipped"]
+              },
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_logicflows",
+                  "operationId": "Response",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_logicflows"
+                },
+                "parameters": {
+                  "response/value": {
+                    "status": "error",
+                    "message": "Flow failed. Check activity log."
+                  },
+                  "response/schema": {
+                    "type": "object",
+                    "properties": {
+                      "status": { "type": "string" },
+                      "message": { "type": "string" }
+                    }
+                  }
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            }
+          }
+        }
+      }
+    },
+    "templateName": ""
+  },
+  "_comment": "Skill: retrieve top-5 risks by risk score for an initiative. pum_probability: 976880000/1=Low(1), 976880002/3=Medium(2), 976880004/5=High(3). pum_riskimpact: 976880000/1=Low(1), 976880002=Medium(2), 976880003/4=High(3). Score = probability_score x impact_score. Max score = 9."
+}

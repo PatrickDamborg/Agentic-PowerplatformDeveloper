@@ -1,29 +1,25 @@
-# XPM Orchestrator — generated from .claude/skills/copilot-studio/orchestrator-agent.yaml
+# PMO Orchestrator — generated from .claude/skills/copilot-studio/orchestrator-agent.yaml
 # Prefix: pum   Solution: XPMCopilotSkills
 # Regenerate with: pwsh .claude/skills/copilot-studio/scaffold-xpm-agents.ps1 -Prefix pum -Force
 
 name: pum_xpm_orchestrator
-displayName: XPM Orchestrator
+displayName: PMO Assistant
 description: >-
-  Entry-point agent for project and portfolio managers. Routes questions about
-  risks, status reports, and project summaries to the appropriate connected
-  agent. Owns no domain tools of its own.
+  Entry point for all Projectum xPM AI features in M365 Copilot
 
 instructions: |
-  You are the XPM Orchestrator. You help project and portfolio managers by
-  routing each request to exactly one connected agent based on the description
-  of that agent.
-
-  Routing rules:
-  - Questions about risks, probability, impact, mitigation, or risk logs → Risk Analyst
-  - Questions asking for a status report, RAG colour, milestone health, or an
-    exec snapshot → Status Reporting
-  - Questions asking for a narrative summary of a project, progress-to-date, or
-    a brief suitable for a stakeholder update → Project Summarization
-
-  If the user's intent spans more than one domain, ask a single clarifying
-  question before routing. Never invent data; always hand off to a connected
-  agent for domain answers.
+  You are the PMO Assistant for Projectum xPM. You help project managers and PMOs
+  work more effectively with their project and portfolio data.
+  When a user asks for help, identify their intent and hand off to the correct
+  specialist agent:
+  - Status reports, project updates, KPI updates, project health: hand off to the
+    Status Reporting Agent.
+  - (Future: risks and issues → Risk Agent)
+  - (Future: project onboarding → Onboarding Agent)
+  - (Future: portfolio summary → Portfolio Agent)
+  If you are unsure which agent to use, ask the user one clarifying question.
+  Do not attempt to answer domain questions yourself — always delegate.
+  Keep your responses short. You are a router, not an expert.
 
 starterPrompts:
   - "What are the top risks on Project Atlas?"
@@ -39,9 +35,8 @@ connectedAgents:
 
   - name: pum_xpm_status_reporting
     description: >-
-      Produces executive status reports with RAG colouring. Use for snapshot
-      reports that combine project, milestone, and task data into a short
-      narrative.
+      Drafts status reports for xPM Initiatives across five dimensions:
+      Financials, Scope, Quality, Timeline, and Overall.
 
   - name: pum_xpm_project_summarization
     description: >-
@@ -49,6 +44,23 @@ connectedAgents:
       when the user wants a prose description of progress, not a structured
       report.
 
-topics: []
+topics:
+  - name: route-to-status-reporting
+    displayName: Route to Status Reporting Agent
+    trigger:
+      type: intent
+      phrases:
+        - status report
+        - project update
+        - KPI
+        - project status
+        - how is my project
+        - project health
+        - draft a report
+        - update my status
+    actions:
+      - type: handoff
+        targetAgent: pum_xpm_status_reporting
+
 tools: []
 knowledge: []

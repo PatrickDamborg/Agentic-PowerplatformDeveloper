@@ -1,0 +1,256 @@
+{
+  "schemaVersion": "1.0.0.0",
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "pum_sharedcommondataserviceforapps_1479b"
+        },
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        }
+      },
+      "shared_logicflows": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "pum_sharedlogicflows"
+        },
+        "api": {
+          "name": "shared_logicflows"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        }
+      },
+      "triggers": {
+        "When_Copilot_Studio_calls_a_flow": {
+          "type": "OpenApiConnection",
+          "kind": "PowerVirtualAgents",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_logicflows",
+              "operationId": "Run_a_flow_from_Microsoft_Copilot_Studio",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_logicflows"
+            },
+            "parameters": {
+              "schema": {
+                "type": "object",
+                "required": ["InitiativeId"],
+                "properties": {
+                  "InitiativeId": {
+                    "title": "Initiative id",
+                    "type": "string",
+                    "description": "GUID of the pum_initiative to retrieve details for.",
+                    "x-ms-agent-required": true
+                  }
+                }
+              }
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        }
+      },
+      "actions": {
+        "Try_Scope": {
+          "type": "Scope",
+          "runAfter": {},
+          "actions": {
+            "List_Initiative": {
+              "type": "OpenApiConnection",
+              "runAfter": {},
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "pum_initiatives",
+                  "$filter": "pum_initiativeid eq @{triggerBody()?['InitiativeId']}",
+                  "$select": "pum_initiativeid,pum_name,pum_description,statuscode",
+                  "$expand": "pum_Sponsor($select=fullname),pum_Category($select=pum_name),pum_Portfolio($select=pum_name),pum_Program($select=pum_name)",
+                  "$top": 1
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Check_Found": {
+              "type": "If",
+              "runAfter": {
+                "List_Initiative": ["Succeeded"]
+              },
+              "expression": {
+                "equals": [
+                  "@length(body('List_Initiative')?['value'])",
+                  0
+                ]
+              },
+              "actions": {
+                "Compose_Not_Found": {
+                  "type": "Compose",
+                  "runAfter": {},
+                  "inputs": {
+                    "initiativeId": null,
+                    "name": null,
+                    "error": "Initiative not found"
+                  }
+                },
+                "Respond_Not_Found": {
+                  "type": "OpenApiConnectionWebhookResponse",
+                  "runAfter": {
+                    "Compose_Not_Found": ["Succeeded"]
+                  },
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_logicflows",
+                      "operationId": "Response",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_logicflows"
+                    },
+                    "parameters": {
+                      "response/value": "@outputs('Compose_Not_Found')",
+                      "response/schema": {
+                        "type": "object",
+                        "properties": {
+                          "initiativeId": { "type": "string" },
+                          "name": { "type": "string" },
+                          "error": { "type": "string" }
+                        }
+                      }
+                    },
+                    "authentication": "@parameters('$authentication')"
+                  }
+                }
+              },
+              "else": {
+                "actions": {
+                  "Compose_Success_Payload": {
+                    "type": "Compose",
+                    "runAfter": {},
+                    "inputs": {
+                      "initiativeId": "@{first(body('List_Initiative')?['value'])?['pum_initiativeid']}",
+                      "name": "@{first(body('List_Initiative')?['value'])?['pum_name']}",
+                      "description": "@{first(body('List_Initiative')?['value'])?['pum_description']}",
+                      "sponsor": "@{first(body('List_Initiative')?['value'])?['pum_Sponsor/fullname']}",
+                      "category": "@{first(body('List_Initiative')?['value'])?['pum_Category/pum_name']}",
+                      "portfolio": "@{first(body('List_Initiative')?['value'])?['pum_Portfolio/pum_name']}",
+                      "program": "@{first(body('List_Initiative')?['value'])?['pum_Program/pum_name']}",
+                      "statusCode": "@{first(body('List_Initiative')?['value'])?['statuscode']}"
+                    }
+                  },
+                  "Respond_to_Copilot": {
+                    "type": "OpenApiConnectionWebhookResponse",
+                    "runAfter": {
+                      "Compose_Success_Payload": ["Succeeded"]
+                    },
+                    "inputs": {
+                      "host": {
+                        "connectionName": "shared_logicflows",
+                        "operationId": "Response",
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_logicflows"
+                      },
+                      "parameters": {
+                        "response/value": "@outputs('Compose_Success_Payload')",
+                        "response/schema": {
+                          "type": "object",
+                          "properties": {
+                            "initiativeId": { "type": "string", "description": "GUID of the initiative." },
+                            "name": { "type": "string", "description": "Initiative name." },
+                            "description": { "type": "string", "description": "Initiative description." },
+                            "sponsor": { "type": "string", "description": "Full name of the sponsor." },
+                            "category": { "type": "string", "description": "Category name." },
+                            "portfolio": { "type": "string", "description": "Portfolio name." },
+                            "program": { "type": "string", "description": "Program name." },
+                            "statusCode": { "type": "integer", "description": "Status code of the initiative record." }
+                          }
+                        }
+                      },
+                      "authentication": "@parameters('$authentication')"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "Catch_Scope": {
+          "type": "Scope",
+          "runAfter": {
+            "Try_Scope": ["Failed", "TimedOut"]
+          },
+          "actions": {
+            "Compose_Error_Details": {
+              "type": "Compose",
+              "runAfter": {},
+              "inputs": {
+                "flowName": "@workflow()?['tags']['flowDisplayName']",
+                "runId": "@workflow()?['run']['name']",
+                "errorResult": "@result('Try_Scope')",
+                "timestamp": "@utcNow()"
+              }
+            },
+            "Log_Error_Row": {
+              "type": "OpenApiConnection",
+              "runAfter": {
+                "Compose_Error_Details": ["Succeeded"]
+              },
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "CreateRecord",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "pum_activitylogs",
+                  "item/pum_category": "CopilotSkill",
+                  "item/pum_details": "@{string(outputs('Compose_Error_Details'))}"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Respond_to_Copilot_With_Error": {
+              "type": "OpenApiConnectionWebhookResponse",
+              "runAfter": {
+                "Log_Error_Row": ["Succeeded", "Failed", "TimedOut", "Skipped"]
+              },
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_logicflows",
+                  "operationId": "Response",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_logicflows"
+                },
+                "parameters": {
+                  "response/value": {
+                    "status": "error",
+                    "message": "Flow failed. Check activity log."
+                  },
+                  "response/schema": {
+                    "type": "object",
+                    "properties": {
+                      "status": { "type": "string" },
+                      "message": { "type": "string" }
+                    }
+                  }
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            }
+          }
+        }
+      }
+    },
+    "templateName": ""
+  },
+  "_comment": "Skill: retrieve initiative details including sponsor, category, portfolio, and program expansions. Input: InitiativeId (GUID). Returns not-found sentinel when no record matches."
+}

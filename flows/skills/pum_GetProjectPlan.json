@@ -1,0 +1,370 @@
+{
+  "schemaVersion": "1.0.0.0",
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "pum_sharedcommondataserviceforapps_1479b"
+        },
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        }
+      },
+      "shared_logicflows": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "pum_sharedlogicflows"
+        },
+        "api": {
+          "name": "shared_logicflows"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        }
+      },
+      "triggers": {
+        "When_Copilot_Studio_calls_a_flow": {
+          "type": "OpenApiConnection",
+          "kind": "PowerVirtualAgents",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_logicflows",
+              "operationId": "Run_a_flow_from_Microsoft_Copilot_Studio",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_logicflows"
+            },
+            "parameters": {
+              "schema": {
+                "type": "object",
+                "required": ["InitiativeId"],
+                "properties": {
+                  "InitiativeId": {
+                    "title": "Initiative id",
+                    "type": "string",
+                    "description": "GUID of the pum_initiative whose project plan to retrieve.",
+                    "x-ms-agent-required": true
+                  }
+                }
+              }
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        }
+      },
+      "actions": {
+        "Try_Scope": {
+          "type": "Scope",
+          "runAfter": {},
+          "actions": {
+            "List_GanttTasks": {
+              "type": "OpenApiConnection",
+              "runAfter": {},
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "pum_gantttasks",
+                  "$filter": "_pum_initiative_value eq @{triggerBody()?['InitiativeId']}",
+                  "$select": "pum_gantttaskid,pum_name,pum_start,pum_finish,pum_percentcomplete,pum_wbs",
+                  "$orderby": "pum_wbs asc",
+                  "$top": 500
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Compute_TotalTasks": {
+              "type": "Compose",
+              "runAfter": {
+                "List_GanttTasks": ["Succeeded"]
+              },
+              "inputs": "@length(body('List_GanttTasks')?['value'])"
+            },
+            "Compute_CompletedTasks": {
+              "type": "Compose",
+              "runAfter": {
+                "Compute_TotalTasks": ["Succeeded"]
+              },
+              "inputs": "@length(filter(body('List_GanttTasks')?['value'], equals(item()?['pum_percentcomplete'], 100)))"
+            },
+            "Compute_PercentComplete": {
+              "type": "Compose",
+              "runAfter": {
+                "Compute_CompletedTasks": ["Succeeded"]
+              },
+              "inputs": "@if(greater(outputs('Compute_TotalTasks'), 0), int(div(mul(outputs('Compute_CompletedTasks'), 100), outputs('Compute_TotalTasks'))), 0)"
+            },
+            "Filter_OverdueTasks": {
+              "type": "Query",
+              "runAfter": {
+                "Compute_PercentComplete": ["Succeeded"]
+              },
+              "inputs": {
+                "from": "@body('List_GanttTasks')?['value']",
+                "where": "@and(less(item()?['pum_finish'], utcNow()), less(item()?['pum_percentcomplete'], 100))"
+              }
+            },
+            "Select_OverdueTasks": {
+              "type": "Select",
+              "runAfter": {
+                "Filter_OverdueTasks": ["Succeeded"]
+              },
+              "inputs": {
+                "from": "@body('Filter_OverdueTasks')",
+                "select": {
+                  "name": "@item()?['pum_name']",
+                  "dueDate": "@item()?['pum_finish']",
+                  "percentComplete": "@item()?['pum_percentcomplete']",
+                  "daysOverdue": "@int(div(sub(ticks(utcNow()), ticks(item()?['pum_finish'])), 864000000000))"
+                }
+              }
+            },
+            "Sort_OverdueTasks": {
+              "type": "Compose",
+              "runAfter": {
+                "Select_OverdueTasks": ["Succeeded"]
+              },
+              "inputs": "@take(sort(body('Select_OverdueTasks'), 'daysOverdue', 'desc'), 5)"
+            },
+            "Compute_30DaysFromNow": {
+              "type": "Compose",
+              "runAfter": {
+                "Sort_OverdueTasks": ["Succeeded"]
+              },
+              "inputs": "@addDays(utcNow(), 30)"
+            },
+            "Filter_UpcomingMilestones": {
+              "type": "Query",
+              "runAfter": {
+                "Compute_30DaysFromNow": ["Succeeded"]
+              },
+              "inputs": {
+                "from": "@body('List_GanttTasks')?['value']",
+                "where": "@and(greaterOrEquals(item()?['pum_finish'], utcNow()), lessOrEquals(item()?['pum_finish'], outputs('Compute_30DaysFromNow')), equals(item()?['pum_finish'], item()?['pum_start']))"
+              }
+            },
+            "Select_UpcomingMilestones": {
+              "type": "Select",
+              "runAfter": {
+                "Filter_UpcomingMilestones": ["Succeeded"]
+              },
+              "inputs": {
+                "from": "@body('Filter_UpcomingMilestones')",
+                "select": {
+                  "name": "@item()?['pum_name']",
+                  "dueDate": "@item()?['pum_finish']",
+                  "percentComplete": "@item()?['pum_percentcomplete']",
+                  "daysUntilDue": "@int(div(sub(ticks(item()?['pum_finish']), ticks(utcNow())), 864000000000))"
+                }
+              }
+            },
+            "Sort_UpcomingMilestones": {
+              "type": "Compose",
+              "runAfter": {
+                "Select_UpcomingMilestones": ["Succeeded"]
+              },
+              "inputs": "@take(sort(body('Select_UpcomingMilestones'), 'daysUntilDue', 'asc'), 5)"
+            },
+            "Check_Empty": {
+              "type": "If",
+              "runAfter": {
+                "Sort_UpcomingMilestones": ["Succeeded"]
+              },
+              "expression": {
+                "equals": [
+                  "@outputs('Compute_TotalTasks')",
+                  0
+                ]
+              },
+              "actions": {
+                "Compose_Empty_Payload": {
+                  "type": "Compose",
+                  "runAfter": {},
+                  "inputs": {
+                    "totalTasks": 0,
+                    "completedTasks": 0,
+                    "percentComplete": 0,
+                    "overdueTasks": [],
+                    "upcomingMilestones": []
+                  }
+                },
+                "Respond_Empty": {
+                  "type": "OpenApiConnectionWebhookResponse",
+                  "runAfter": {
+                    "Compose_Empty_Payload": ["Succeeded"]
+                  },
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_logicflows",
+                      "operationId": "Response",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_logicflows"
+                    },
+                    "parameters": {
+                      "response/value": "@outputs('Compose_Empty_Payload')",
+                      "response/schema": {
+                        "type": "object",
+                        "properties": {
+                          "totalTasks": { "type": "integer" },
+                          "completedTasks": { "type": "integer" },
+                          "percentComplete": { "type": "integer" },
+                          "overdueTasks": { "type": "array" },
+                          "upcomingMilestones": { "type": "array" }
+                        }
+                      }
+                    },
+                    "authentication": "@parameters('$authentication')"
+                  }
+                }
+              },
+              "else": {
+                "actions": {
+                  "Compose_Success_Payload": {
+                    "type": "Compose",
+                    "runAfter": {},
+                    "inputs": {
+                      "totalTasks": "@outputs('Compute_TotalTasks')",
+                      "completedTasks": "@outputs('Compute_CompletedTasks')",
+                      "percentComplete": "@outputs('Compute_PercentComplete')",
+                      "overdueTasks": "@outputs('Sort_OverdueTasks')",
+                      "upcomingMilestones": "@outputs('Sort_UpcomingMilestones')"
+                    }
+                  },
+                  "Respond_to_Copilot": {
+                    "type": "OpenApiConnectionWebhookResponse",
+                    "runAfter": {
+                      "Compose_Success_Payload": ["Succeeded"]
+                    },
+                    "inputs": {
+                      "host": {
+                        "connectionName": "shared_logicflows",
+                        "operationId": "Response",
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_logicflows"
+                      },
+                      "parameters": {
+                        "response/value": "@outputs('Compose_Success_Payload')",
+                        "response/schema": {
+                          "type": "object",
+                          "properties": {
+                            "totalTasks": { "type": "integer", "description": "Total number of Gantt tasks." },
+                            "completedTasks": { "type": "integer", "description": "Number of tasks at 100% complete." },
+                            "percentComplete": { "type": "integer", "description": "Overall completion percentage." },
+                            "overdueTasks": {
+                              "type": "array",
+                              "description": "Top 5 overdue tasks sorted by days overdue descending.",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "name": { "type": "string" },
+                                  "dueDate": { "type": "string" },
+                                  "percentComplete": { "type": "integer" },
+                                  "daysOverdue": { "type": "integer" }
+                                }
+                              }
+                            },
+                            "upcomingMilestones": {
+                              "type": "array",
+                              "description": "Top 5 upcoming milestones within the next 30 days sorted by due date ascending.",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "name": { "type": "string" },
+                                  "dueDate": { "type": "string" },
+                                  "percentComplete": { "type": "integer" },
+                                  "daysUntilDue": { "type": "integer" }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "authentication": "@parameters('$authentication')"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "Catch_Scope": {
+          "type": "Scope",
+          "runAfter": {
+            "Try_Scope": ["Failed", "TimedOut"]
+          },
+          "actions": {
+            "Compose_Error_Details": {
+              "type": "Compose",
+              "runAfter": {},
+              "inputs": {
+                "flowName": "@workflow()?['tags']['flowDisplayName']",
+                "runId": "@workflow()?['run']['name']",
+                "errorResult": "@result('Try_Scope')",
+                "timestamp": "@utcNow()"
+              }
+            },
+            "Log_Error_Row": {
+              "type": "OpenApiConnection",
+              "runAfter": {
+                "Compose_Error_Details": ["Succeeded"]
+              },
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "CreateRecord",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "pum_activitylogs",
+                  "item/pum_category": "CopilotSkill",
+                  "item/pum_details": "@{string(outputs('Compose_Error_Details'))}"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Respond_to_Copilot_With_Error": {
+              "type": "OpenApiConnectionWebhookResponse",
+              "runAfter": {
+                "Log_Error_Row": ["Succeeded", "Failed", "TimedOut", "Skipped"]
+              },
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_logicflows",
+                  "operationId": "Response",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_logicflows"
+                },
+                "parameters": {
+                  "response/value": {
+                    "status": "error",
+                    "message": "Flow failed. Check activity log."
+                  },
+                  "response/schema": {
+                    "type": "object",
+                    "properties": {
+                      "status": { "type": "string" },
+                      "message": { "type": "string" }
+                    }
+                  }
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            }
+          }
+        }
+      }
+    },
+    "templateName": ""
+  },
+  "_comment": "Skill: retrieve project plan summary from pum_gantttasks for an initiative. Computes total tasks, completed count, overall %, top-5 overdue tasks (daysOverdue desc), and top-5 upcoming milestones within 30 days (milestone = task where pum_finish == pum_start). Ticks divisor 864000000000 = 1 day in 100-nanosecond ticks."
+}
