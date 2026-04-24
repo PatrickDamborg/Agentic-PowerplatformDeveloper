@@ -1,0 +1,291 @@
+{
+  "schemaVersion": "1.0.0.0",
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "pum_sharedcommondataserviceforapps_1479b"
+        },
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        }
+      },
+      "shared_logicflows": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "pum_sharedlogicflows"
+        },
+        "api": {
+          "name": "shared_logicflows"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        }
+      },
+      "triggers": {
+        "When_Copilot_Studio_calls_a_flow": {
+          "type": "OpenApiConnection",
+          "kind": "PowerVirtualAgents",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_logicflows",
+              "operationId": "Run_a_flow_from_Microsoft_Copilot_Studio",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_logicflows"
+            },
+            "parameters": {
+              "schema": {
+                "type": "object",
+                "required": ["InitiativeId"],
+                "properties": {
+                  "InitiativeId": {
+                    "title": "Initiative id",
+                    "type": "string",
+                    "description": "GUID of the pum_initiative whose most recent status report to retrieve.",
+                    "x-ms-agent-required": true
+                  }
+                }
+              }
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        }
+      },
+      "actions": {
+        "Try_Scope": {
+          "type": "Scope",
+          "runAfter": {},
+          "actions": {
+            "List_StatusReports": {
+              "type": "OpenApiConnection",
+              "runAfter": {},
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "pum_statusreportings",
+                  "$filter": "_pum_initiative_value eq @{triggerBody()?['InitiativeId']}",
+                  "$select": "pum_statusreportingid,pum_name,createdon,pum_kpinewcost,pum_kpicurrentcost,pum_kpinewquality,pum_kpicurrentquality,pum_kpinewresources,pum_kpicurrentresources,pum_kpinewschedule,pum_kpicurrentschedule,pum_kpinewscope,pum_kpicurrentscope,pum_kpinewsummary,pum_kpicurrentsummary",
+                  "$orderby": "createdon desc",
+                  "$top": 1
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Check_Found": {
+              "type": "If",
+              "runAfter": {
+                "List_StatusReports": ["Succeeded"]
+              },
+              "expression": {
+                "equals": [
+                  "@length(body('List_StatusReports')?['value'])",
+                  0
+                ]
+              },
+              "actions": {
+                "Compose_Empty_Payload": {
+                  "type": "Compose",
+                  "runAfter": {},
+                  "inputs": {
+                    "previousReport": null
+                  }
+                },
+                "Respond_Empty": {
+                  "type": "OpenApiConnectionWebhookResponse",
+                  "runAfter": {
+                    "Compose_Empty_Payload": ["Succeeded"]
+                  },
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_logicflows",
+                      "operationId": "Response",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_logicflows"
+                    },
+                    "parameters": {
+                      "response/value": "@outputs('Compose_Empty_Payload')",
+                      "response/schema": {
+                        "type": "object",
+                        "properties": {
+                          "previousReport": { "type": "object" }
+                        }
+                      }
+                    },
+                    "authentication": "@parameters('$authentication')"
+                  }
+                }
+              },
+              "else": {
+                "actions": {
+                  "Compose_Report_Row": {
+                    "type": "Compose",
+                    "runAfter": {},
+                    "inputs": "@first(body('List_StatusReports')?['value'])"
+                  },
+                  "Compose_Success_Payload": {
+                    "type": "Compose",
+                    "runAfter": {
+                      "Compose_Report_Row": ["Succeeded"]
+                    },
+                    "inputs": {
+                      "previousReport": {
+                        "date": "@formatDateTime(outputs('Compose_Report_Row')?['createdon'], 'yyyy-MM-dd')",
+                        "kpis": {
+                          "cost": {
+                            "current": "@if(equals(outputs('Compose_Report_Row')?['pum_kpicurrentcost'], 493840003), 'Green', if(equals(outputs('Compose_Report_Row')?['pum_kpicurrentcost'], 493840002), 'Yellow', if(equals(outputs('Compose_Report_Row')?['pum_kpicurrentcost'], 493840001), 'Red', 'Not Set')))",
+                            "previous": "@if(equals(outputs('Compose_Report_Row')?['pum_kpinewcost'], 493840003), 'Green', if(equals(outputs('Compose_Report_Row')?['pum_kpinewcost'], 493840002), 'Yellow', if(equals(outputs('Compose_Report_Row')?['pum_kpinewcost'], 493840001), 'Red', 'Not Set')))"
+                          },
+                          "quality": {
+                            "current": "@if(equals(outputs('Compose_Report_Row')?['pum_kpicurrentquality'], 493840003), 'Green', if(equals(outputs('Compose_Report_Row')?['pum_kpicurrentquality'], 493840002), 'Yellow', if(equals(outputs('Compose_Report_Row')?['pum_kpicurrentquality'], 493840001), 'Red', 'Not Set')))",
+                            "previous": "@if(equals(outputs('Compose_Report_Row')?['pum_kpinewquality'], 493840003), 'Green', if(equals(outputs('Compose_Report_Row')?['pum_kpinewquality'], 493840002), 'Yellow', if(equals(outputs('Compose_Report_Row')?['pum_kpinewquality'], 493840001), 'Red', 'Not Set')))"
+                          },
+                          "resources": {
+                            "current": "@if(equals(outputs('Compose_Report_Row')?['pum_kpicurrentresources'], 493840003), 'Green', if(equals(outputs('Compose_Report_Row')?['pum_kpicurrentresources'], 493840002), 'Yellow', if(equals(outputs('Compose_Report_Row')?['pum_kpicurrentresources'], 493840001), 'Red', 'Not Set')))",
+                            "previous": "@if(equals(outputs('Compose_Report_Row')?['pum_kpinewresources'], 493840003), 'Green', if(equals(outputs('Compose_Report_Row')?['pum_kpinewresources'], 493840002), 'Yellow', if(equals(outputs('Compose_Report_Row')?['pum_kpinewresources'], 493840001), 'Red', 'Not Set')))"
+                          },
+                          "schedule": {
+                            "current": "@if(equals(outputs('Compose_Report_Row')?['pum_kpicurrentschedule'], 493840003), 'Green', if(equals(outputs('Compose_Report_Row')?['pum_kpicurrentschedule'], 493840002), 'Yellow', if(equals(outputs('Compose_Report_Row')?['pum_kpicurrentschedule'], 493840001), 'Red', 'Not Set')))",
+                            "previous": "@if(equals(outputs('Compose_Report_Row')?['pum_kpinewschedule'], 493840003), 'Green', if(equals(outputs('Compose_Report_Row')?['pum_kpinewschedule'], 493840002), 'Yellow', if(equals(outputs('Compose_Report_Row')?['pum_kpinewschedule'], 493840001), 'Red', 'Not Set')))"
+                          },
+                          "scope": {
+                            "current": "@if(equals(outputs('Compose_Report_Row')?['pum_kpicurrentscope'], 493840003), 'Green', if(equals(outputs('Compose_Report_Row')?['pum_kpicurrentscope'], 493840002), 'Yellow', if(equals(outputs('Compose_Report_Row')?['pum_kpicurrentscope'], 493840001), 'Red', 'Not Set')))",
+                            "previous": "@if(equals(outputs('Compose_Report_Row')?['pum_kpinewscope'], 493840003), 'Green', if(equals(outputs('Compose_Report_Row')?['pum_kpinewscope'], 493840002), 'Yellow', if(equals(outputs('Compose_Report_Row')?['pum_kpinewscope'], 493840001), 'Red', 'Not Set')))"
+                          },
+                          "summary": {
+                            "current": "@if(equals(outputs('Compose_Report_Row')?['pum_kpicurrentsummary'], 493840003), 'Green', if(equals(outputs('Compose_Report_Row')?['pum_kpicurrentsummary'], 493840002), 'Yellow', if(equals(outputs('Compose_Report_Row')?['pum_kpicurrentsummary'], 493840001), 'Red', 'Not Set')))",
+                            "previous": "@if(equals(outputs('Compose_Report_Row')?['pum_kpinewsummary'], 493840003), 'Green', if(equals(outputs('Compose_Report_Row')?['pum_kpinewsummary'], 493840002), 'Yellow', if(equals(outputs('Compose_Report_Row')?['pum_kpinewsummary'], 493840001), 'Red', 'Not Set')))"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "Respond_to_Copilot": {
+                    "type": "OpenApiConnectionWebhookResponse",
+                    "runAfter": {
+                      "Compose_Success_Payload": ["Succeeded"]
+                    },
+                    "inputs": {
+                      "host": {
+                        "connectionName": "shared_logicflows",
+                        "operationId": "Response",
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_logicflows"
+                      },
+                      "parameters": {
+                        "response/value": "@outputs('Compose_Success_Payload')",
+                        "response/schema": {
+                          "type": "object",
+                          "properties": {
+                            "previousReport": {
+                              "type": "object",
+                              "description": "Most recent status report, or null if none exists.",
+                              "properties": {
+                                "date": { "type": "string", "description": "Report date yyyy-MM-dd." },
+                                "kpis": {
+                                  "type": "object",
+                                  "description": "KPI values. current=pum_kpicurrent*, previous=pum_kpinew*.",
+                                  "properties": {
+                                    "cost":      { "type": "object", "properties": { "current": { "type": "string" }, "previous": { "type": "string" } } },
+                                    "quality":   { "type": "object", "properties": { "current": { "type": "string" }, "previous": { "type": "string" } } },
+                                    "resources": { "type": "object", "properties": { "current": { "type": "string" }, "previous": { "type": "string" } } },
+                                    "schedule":  { "type": "object", "properties": { "current": { "type": "string" }, "previous": { "type": "string" } } },
+                                    "scope":     { "type": "object", "properties": { "current": { "type": "string" }, "previous": { "type": "string" } } },
+                                    "summary":   { "type": "object", "properties": { "current": { "type": "string" }, "previous": { "type": "string" } } }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "authentication": "@parameters('$authentication')"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "Catch_Scope": {
+          "type": "Scope",
+          "runAfter": {
+            "Try_Scope": ["Failed", "TimedOut"]
+          },
+          "actions": {
+            "Compose_Error_Details": {
+              "type": "Compose",
+              "runAfter": {},
+              "inputs": {
+                "flowName": "@workflow()?['tags']['flowDisplayName']",
+                "runId": "@workflow()?['run']['name']",
+                "errorResult": "@result('Try_Scope')",
+                "timestamp": "@utcNow()"
+              }
+            },
+            "Log_Error_Row": {
+              "type": "OpenApiConnection",
+              "runAfter": {
+                "Compose_Error_Details": ["Succeeded"]
+              },
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "CreateRecord",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "pum_activitylogs",
+                  "item/pum_category": "CopilotSkill",
+                  "item/pum_details": "@{string(outputs('Compose_Error_Details'))}"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Respond_to_Copilot_With_Error": {
+              "type": "OpenApiConnectionWebhookResponse",
+              "runAfter": {
+                "Log_Error_Row": ["Succeeded", "Failed", "TimedOut", "Skipped"]
+              },
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_logicflows",
+                  "operationId": "Response",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_logicflows"
+                },
+                "parameters": {
+                  "response/value": {
+                    "status": "error",
+                    "message": "Flow failed. Check activity log."
+                  },
+                  "response/schema": {
+                    "type": "object",
+                    "properties": {
+                      "status": { "type": "string" },
+                      "message": { "type": "string" }
+                    }
+                  }
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            }
+          }
+        }
+      }
+    },
+    "templateName": ""
+  },
+  "_comment": "Skill: retrieve most recent pum_statusreporting record for an initiative. KPI option set: 493840003=Green, 493840002=Yellow, 493840001=Red, 493840000=Not Set. 'previous' field = pum_kpinew* (proposed value from that report), 'current' field = pum_kpicurrent*."
+}

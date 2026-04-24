@@ -1,139 +1,218 @@
-# Status Reporting — connected agent
-# Produces RAG-coloured snapshots across pum_project, pum_milestone, pum_task.
+# Status Reporting Agent — connected agent
+# Drafts status reports across five dimensions: Financials, Scope, Quality, Timeline, Overall.
+# All data retrieved via four Power Automate flows in XPMCopilotSkills solution.
 
 name: pum_xpm_status_reporting
-displayName: Status Reporting
+displayName: Status Reporting Agent
 description: >-
-  Produces executive status reports with RAG colouring across XPM projects.
-  Use when the user wants a snapshot report combining project metadata,
-  milestone health, and task progress. Applies RAG convention
-  (Green / Amber / Red) based on milestone slip days.
+  Drafts status reports for xPM Initiatives across five dimensions
 
 instructions: |
-  You are the Status Reporting agent. You produce concise, exec-tone reports.
+  You are a status reporting assistant for Projectum xPM. Your job is to help
+  project managers and PMOs draft a status report for their project.
 
-  RAG convention:
-  - GREEN  — no milestones overdue, no tasks blocked
-  - AMBER  — 1 milestone overdue OR >=2 tasks blocked
-  - RED    — 2+ milestones overdue OR a milestone overdue by more than the
-             threshold defined in the environment variable
-             pum_statusreporting_red_threshold_days
+  ## Step 1 — Gather data
+  You receive the Initiative ID from context. Before drafting, always call all
+  four tools in this order:
+    1. GetInitiativeDetails — project name, sponsor, phase
+    2. GetProjectPlan — task completion, overdue tasks, upcoming milestones
+    3. GetRisks — top open risks by severity
+    4. GetStatusReport — most recent KPI snapshot
 
-  Always cite concrete milestone or task names when explaining an AMBER/RED.
-  Keep the overall narrative to 5 sentences maximum.
+  ## Step 2 — Draft the report
+  Structure the draft across five dimensions. For each, provide:
+    - Status: On Track / At Risk / Off Track
+    - Narrative: 2-4 sentences explaining why
 
-  Do NOT handle risks, summaries, or anything outside status. If asked, reply
-  briefly and ask the orchestrator to re-route.
+  FINANCIALS
+    Use data from GetStatusReport (Cost KPI + financial context).
+    On Track:  Cost KPI is Green
+    At Risk:   Cost KPI is Yellow
+    Off Track: Cost KPI is Red, or no financial data available
+
+  SCOPE
+    Use GetInitiativeDetails (description) + GetProjectPlan (completion rate).
+    On Track:  Tasks progressing as planned, no unplanned scope additions
+    At Risk:   Completion behind plan or pending scope changes
+    Off Track: Major unplanned scope added or key deliverables at risk
+
+  QUALITY
+    Use GetStatusReport (Quality KPI) + GetRisks (quality-related risks).
+    Derive status from the existing Quality KPI value as baseline.
+    If no quality data exists, state this explicitly — do not guess.
+
+  TIMELINE
+    Use GetProjectPlan (overdue tasks, milestones, percent complete).
+    On Track:  No overdue tasks, next milestone on schedule
+    At Risk:   1-2 overdue tasks, or next milestone within 5 days of being late
+    Off Track: 3 or more overdue tasks, or a milestone has been missed
+
+  OVERALL
+    Do not call any tool for this dimension. Derive from the other four:
+    On Track:  All four are On Track
+    At Risk:   One or two are At Risk, none are Off Track
+    Off Track: Any dimension is Off Track, or two or more are At Risk
+    Write 2-3 sentences on overall health and the one thing the PM should focus on.
+
+  ## Step 3 — Recommended KPI updates
+  After the five dimensions, add a section "Recommended KPI updates".
+  For each KPI in the StatusReporting record (Cost, Quality, Resources, Schedule,
+  Scope, Summary): suggest Stay / Improve / Worsen with a one-line reason for any
+  change.
+
+  ## Step 4 — Invite refinement
+  Present the draft and invite the user to refine it. Examples:
+    "Make the timeline section shorter"
+    "Change Overall to Off Track — we missed a milestone"
+    "Add a note about the budget conversation"
+    "Rewrite this more formally for the steering committee"
+  Apply changes directly. Do not re-run tools unless the user asks for fresh data.
+
+  ## Rules
+    - Be direct. No generic project management advice.
+    - If a tool returns no data, say so in that section — do not fill with assumptions.
+    - Do not save or submit the status report. Tell the user to copy the draft into
+      xPM manually. Saving is not yet supported.
+    - If the Initiative ID is not in context, ask: "Which project would you like to
+      report on?" Then resolve the name via GetInitiativeDetails before proceeding.
 
 tools:
-  - name: search-projects
-    displayName: Search projects
-    type: dataverse.unboundAction
-    description: >-
-      Fuzzy keyword search over pum_project. Use to resolve a project name
-      mentioned in the user's utterance into a concrete project id.
-    connection:
-      reference: shared_commondataserviceforapps
-      authentication: makerProvidedCredentials
-    inputs:
-      - name: environment
-        description: Dataverse environment base URL.
-        type: string
-        required: true
-        defaultValue: https://REPLACE_WITH_ORG.crm.dynamics.com
-      - name: actionName
-        description: Literal string "searchquery".
-        type: string
-        required: true
-        defaultValue: searchquery
-      - name: entities
-        description: JSON array for the pum_project table.
-        type: json
-        required: true
-        defaultValue: |
-          [
-            {
-              "Name": "pum_project",
-              "SearchColumns": ["pum_name", "pum_description"],
-              "SelectColumns": ["pum_name", "pum_projectmanager", "pum_startdate", "pum_enddate"]
-            }
-          ]
-      - name: search
-        description: Free-text keywords from the user. Copilot fills this at runtime.
-        type: string
-        required: true
-        dynamic: true
-    outputs:
-      - name: value
-        description: Array of ranked project matches.
-        type: array
-
-  - name: list-milestones-for-project
-    displayName: List milestones for a project
-    type: dataverse.listRows
-    description: >-
-      Returns all milestones on a project with due date and status. Used to
-      compute RAG colour based on slip days.
-    connection:
-      reference: shared_commondataserviceforapps
-    inputs:
-      - name: entityName
-        description: Plural logical entity set name for milestones.
-        type: string
-        required: true
-        defaultValue: pum_milestones
-      - name: $filter
-        description: Filter to milestones for a single project. Expects @{parameters('projectId')}.
-        type: string
-        required: true
-        defaultValue: _pum_project_value eq @{parameters('projectId')}
-      - name: $select
-        description: Columns needed to compute RAG and render the narrative.
-        type: string
-        required: true
-        defaultValue: pum_name,pum_duedate,pum_status,pum_completedate
-      - name: $orderby
-        description: Ordering clause.
-        type: string
-        required: false
-        defaultValue: pum_duedate asc
-    outputs:
-      - name: value
-        description: Array of milestones with selected columns.
-        type: array
-
-  - name: generate-status-report
-    displayName: Generate status report
+  - name: pum_GetInitiativeDetails
+    displayName: GetInitiativeDetails
     type: powerAutomateFlow
     description: >-
-      Assembles a RAG-coloured status narrative for a project. Combines
-      project metadata, milestone health, and task progress into a fixed
-      output shape. Use when the user wants a report rather than raw data.
+      Returns core metadata for an Initiative (name, description, sponsor,
+      category, portfolio, program, status). Call first to anchor the report
+      header and Scope narrative.
     flow:
-      name: pum_skill_generate_status_report
+      name: pum_GetInitiativeDetails
       solution: XPMCopilotSkills
     inputSchema:
       type: object
-      required: ["projectId"]
+      required: ["InitiativeId"]
       properties:
-        projectId:
+        InitiativeId:
           type: string
-          description: GUID of the pum_project. Resolve via search-projects first.
-        asOfDate:
-          type: string
-          description: ISO date for the snapshot. Defaults to today if omitted.
+          description: GUID of the pum_Initiative record.
     outputSchema:
       type: object
       properties:
-        rag:
+        initiativeId:
           type: string
-          description: One of GREEN, AMBER, or RED per the RAG convention.
-        narrative:
+          description: GUID of the Initiative.
+        name:
           type: string
-          description: 5-sentence exec-tone narrative summarising status.
-        milestoneSummary:
+          description: Display name of the Initiative.
+        description:
+          type: string
+          description: Description / scope statement.
+        sponsor:
+          type: string
+          description: Name of the project sponsor.
+        category:
+          type: string
+          description: Initiative category.
+        portfolio:
+          type: string
+          description: Parent portfolio name.
+        program:
+          type: string
+          description: Parent program name.
+        statusCode:
+          type: string
+          description: Current status code label.
+
+  - name: pum_GetProjectPlan
+    displayName: GetProjectPlan
+    type: powerAutomateFlow
+    description: >-
+      Returns task completion stats, overdue tasks (up to 5), and upcoming
+      milestones (within 30 days, up to 5) for an Initiative. Use for Timeline
+      and Scope dimensions.
+    flow:
+      name: pum_GetProjectPlan
+      solution: XPMCopilotSkills
+    inputSchema:
+      type: object
+      required: ["InitiativeId"]
+      properties:
+        InitiativeId:
+          type: string
+          description: GUID of the pum_Initiative record.
+    outputSchema:
+      type: object
+      properties:
+        totalTasks:
+          type: integer
+          description: Total number of tasks on the Initiative.
+        completedTasks:
+          type: integer
+          description: Number of completed tasks.
+        percentComplete:
+          type: number
+          description: Percentage of tasks completed (0–100).
+        overdueTasks:
           type: array
-          description: Array of objects with milestoneName, dueDate, and status per milestone.
+          description: Up to 5 overdue tasks with name and due date.
+        upcomingMilestones:
+          type: array
+          description: Up to 5 milestones due within the next 30 days.
+
+  - name: pum_GetRisks
+    displayName: GetRisks
+    type: powerAutomateFlow
+    description: >-
+      Returns top 5 open risks sorted by probability × impact score. Use for
+      Quality and Overall dimensions.
+    flow:
+      name: pum_GetRisks
+      solution: XPMCopilotSkills
+    inputSchema:
+      type: object
+      required: ["InitiativeId"]
+      properties:
+        InitiativeId:
+          type: string
+          description: GUID of the pum_Initiative record.
+    outputSchema:
+      type: object
+      properties:
+        openRiskCount:
+          type: integer
+          description: Total number of open risks on the Initiative.
+        topRisks:
+          type: array
+          description: >-
+            Up to 5 highest-scored open risks. Each entry includes: name,
+            probability, impact, score, and description.
+
+  - name: pum_GetStatusReport
+    displayName: GetStatusReport
+    type: powerAutomateFlow
+    description: >-
+      Returns the most recent KPI snapshot for an Initiative (Cost, Quality,
+      Resources, Schedule, Scope, Summary — each with current and previous
+      values as Green/Yellow/Red labels).
+    flow:
+      name: pum_GetStatusReport
+      solution: XPMCopilotSkills
+    inputSchema:
+      type: object
+      required: ["InitiativeId"]
+      properties:
+        InitiativeId:
+          type: string
+          description: GUID of the pum_Initiative record.
+    outputSchema:
+      type: object
+      properties:
+        previousReport:
+          type: object
+          description: >-
+            Most recent status report snapshot. Contains date (ISO string) and
+            kpis object with fields: cost, quality, resources, schedule, scope,
+            summary — each with current and previous label values
+            (Green / Yellow / Red).
 
 knowledge: []
 topics: []
