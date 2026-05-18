@@ -1,0 +1,36 @@
+[
+  {
+    "SchemaName": "context_startdate",
+    "Type": "DateTime",
+    "DisplayName": "Start Date",
+    "Description": "Date the participant started or plans to start this programme",
+    "Format": "DateOnly"
+  },
+  {
+    "SchemaName": "context_durationweeks",
+    "Type": "Integer",
+    "DisplayName": "Duration (weeks)",
+    "Description": "Total planned length of the programme in weeks",
+    "MinValue": 1,
+    "MaxValue": 52
+  },
+  {
+    "SchemaName": "context_status",
+    "Type": "Choice",
+    "DisplayName": "Status",
+    "Description": "Current state of the programme — only one programme should be Active per participant at a time",
+    "Options": [
+      { "Label": "Draft",     "Value": 100000000 },
+      { "Label": "Active",    "Value": 100000001 },
+      { "Label": "Paused",    "Value": 100000002 },
+      { "Label": "Completed", "Value": 100000003 }
+    ]
+  },
+  {
+    "SchemaName": "context_notes",
+    "Type": "Memo",
+    "DisplayName": "Notes",
+    "Description": "General notes about the programme, rationale, or adjustments made over time",
+    "MaxLength": 5000
+  }
+]

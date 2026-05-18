@@ -1,0 +1,61 @@
+[
+  {
+    "SchemaName": "context_gender",
+    "Type": "Choice",
+    "DisplayName": "Gender",
+    "Description": "Biological sex or gender identity — used to tailor programme recommendations",
+    "Options": [
+      { "Label": "Male",              "Value": 100000000 },
+      { "Label": "Female",            "Value": 100000001 },
+      { "Label": "Non-binary",        "Value": 100000002 },
+      { "Label": "Prefer not to say", "Value": 100000003 }
+    ]
+  },
+  {
+    "SchemaName": "context_age",
+    "Type": "Integer",
+    "DisplayName": "Age",
+    "Description": "Age in years — used to adjust intensity and recovery expectations",
+    "MinValue": 10,
+    "MaxValue": 100
+  },
+  {
+    "SchemaName": "context_weight",
+    "Type": "Decimal",
+    "DisplayName": "Weight (kg)",
+    "Description": "Current body weight in kilograms — used as a baseline for tracking progress",
+    "MinValue": 20,
+    "MaxValue": 300,
+    "Precision": 1
+  },
+  {
+    "SchemaName": "context_height",
+    "Type": "Decimal",
+    "DisplayName": "Height (cm)",
+    "Description": "Height in centimetres — used to calculate BMI and inform programme design",
+    "MinValue": 100,
+    "MaxValue": 250,
+    "Precision": 1
+  },
+  {
+    "SchemaName": "context_goals",
+    "Type": "Memo",
+    "DisplayName": "Goals",
+    "Description": "The participant's fitness goals, e.g. lose weight, build strength, run a 5K — drives programme design",
+    "MaxLength": 5000
+  },
+  {
+    "SchemaName": "context_injuries",
+    "Type": "Memo",
+    "DisplayName": "Injuries",
+    "Description": "Known injuries, pain points, or physical limitations the agent must respect when designing exercises",
+    "MaxLength": 5000
+  },
+  {
+    "SchemaName": "context_preferences",
+    "Type": "Memo",
+    "DisplayName": "Preferences",
+    "Description": "Equipment available, preferred workout days, exercise style preferences, or anything else relevant to personalisation",
+    "MaxLength": 5000
+  }
+]

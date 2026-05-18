@@ -1,0 +1,186 @@
+mcs.metadata:
+  componentName: CreateTrainingProfile
+  description: Collects the user's personal details and fitness information to create a training profile.
+kind: AdaptiveDialog
+modelDisplayName: Create Training Profile
+modelDescription: Use this topic when the user wants to create or set up their personal training profile. Collects name, gender, age, weight, height, fitness goals, injuries, and preferences, then confirms the profile has been saved.
+inputs:
+  - kind: AutomaticTaskInput
+    propertyName: userName
+    description: The user's full name for their training profile.
+    entity: StringPrebuiltEntity
+    shouldPromptUser: true
+
+  - kind: AutomaticTaskInput
+    propertyName: userGender
+    description: The user's gender. Options are Male, Female, Non-binary, or Prefer not to say.
+    entity: StringPrebuiltEntity
+    shouldPromptUser: true
+
+  - kind: AutomaticTaskInput
+    propertyName: userAge
+    description: The user's age in years (between 10 and 100).
+    entity: NumberPrebuiltEntity
+    shouldPromptUser: true
+
+  - kind: AutomaticTaskInput
+    propertyName: userWeightKg
+    description: The user's current body weight in kilograms.
+    entity: NumberPrebuiltEntity
+    shouldPromptUser: true
+
+  - kind: AutomaticTaskInput
+    propertyName: userHeightCm
+    description: The user's height in centimetres.
+    entity: NumberPrebuiltEntity
+    shouldPromptUser: true
+
+  - kind: AutomaticTaskInput
+    propertyName: userGoals
+    description: The user's fitness goals, for example losing weight, building strength, or running a 5K.
+    entity: StringPrebuiltEntity
+    shouldPromptUser: true
+
+  - kind: AutomaticTaskInput
+    propertyName: userInjuries
+    description: Any injuries, pain points, or physical limitations the user has. The user may say 'none' if not applicable.
+    entity: StringPrebuiltEntity
+    shouldPromptUser: true
+
+  - kind: AutomaticTaskInput
+    propertyName: userPreferences
+    description: Any equipment preferences, preferred workout days, or other relevant training details the user wants to share.
+    entity: StringPrebuiltEntity
+    shouldPromptUser: true
+
+inputType:
+  properties:
+    userName:
+      displayName: Full Name
+      description: The user's full name.
+      type: String
+    userGender:
+      displayName: Gender
+      description: The user's gender (Male, Female, Non-binary, Prefer not to say).
+      type: String
+    userAge:
+      displayName: Age
+      description: Age in years (10-100).
+      type: Number
+    userWeightKg:
+      displayName: Weight (kg)
+      description: Current body weight in kilograms.
+      type: Number
+    userHeightCm:
+      displayName: Height (cm)
+      description: Height in centimetres.
+      type: Number
+    userGoals:
+      displayName: Fitness Goals
+      description: The user's fitness goals.
+      type: String
+    userInjuries:
+      displayName: Injuries or Limitations
+      description: Any injuries, pain points, or physical limitations.
+      type: String
+    userPreferences:
+      displayName: Preferences
+      description: Equipment preferences, preferred workout days, or other relevant details.
+      type: String
+
+beginDialog:
+  kind: OnRecognizedIntent
+  id: main
+  intent:
+    displayName: Create Training Profile
+    triggerQueries:
+      - create my training profile
+      - set up my training
+      - new profile
+      - create profile
+      - training profile
+
+  actions:
+    - kind: SendActivity
+      id: sendMessage_intro_tp01
+      activity:
+        text:
+          - "Let's create your training profile. I'll ask you a few questions to get everything set up."
+
+    - kind: Question
+      id: question_name_tp01
+      variable: init:Topic.userName
+      prompt: "What is your full name?"
+      entity: StringPrebuiltEntity
+      alwaysPrompt: true
+      interruptionPolicy:
+        allowInterruption: false
+
+    - kind: Question
+      id: question_gender_tp02
+      variable: init:Topic.userGender
+      prompt: "What is your gender? Options are: Male, Female, Non-binary, or Prefer not to say."
+      entity: StringPrebuiltEntity
+      alwaysPrompt: true
+      interruptionPolicy:
+        allowInterruption: false
+
+    - kind: Question
+      id: question_age_tp03
+      variable: init:Topic.userAge
+      prompt: "How old are you? (Please enter a number between 10 and 100)"
+      entity: NumberPrebuiltEntity
+      alwaysPrompt: true
+      interruptionPolicy:
+        allowInterruption: false
+
+    - kind: Question
+      id: question_weight_tp04
+      variable: init:Topic.userWeightKg
+      prompt: "What is your current weight in kilograms?"
+      entity: NumberPrebuiltEntity
+      alwaysPrompt: true
+      interruptionPolicy:
+        allowInterruption: false
+
+    - kind: Question
+      id: question_height_tp05
+      variable: init:Topic.userHeightCm
+      prompt: "What is your height in centimetres?"
+      entity: NumberPrebuiltEntity
+      alwaysPrompt: true
+      interruptionPolicy:
+        allowInterruption: false
+
+    - kind: Question
+      id: question_goals_tp06
+      variable: init:Topic.userGoals
+      prompt: "What are your fitness goals? (e.g. lose weight, build strength, run a 5K)"
+      entity: StringPrebuiltEntity
+      alwaysPrompt: true
+      interruptionPolicy:
+        allowInterruption: false
+
+    - kind: Question
+      id: question_injuries_tp07
+      variable: init:Topic.userInjuries
+      prompt: "Do you have any injuries, pain points, or physical limitations I should know about? (Type 'none' if not applicable)"
+      entity: StringPrebuiltEntity
+      alwaysPrompt: true
+      interruptionPolicy:
+        allowInterruption: false
+
+    - kind: Question
+      id: question_preferences_tp08
+      variable: init:Topic.userPreferences
+      prompt: "Any equipment preferences, preferred workout days, or other relevant details?"
+      entity: StringPrebuiltEntity
+      alwaysPrompt: true
+      interruptionPolicy:
+        allowInterruption: false
+
+    - kind: SendActivity
+      id: sendMessage_confirm_tp09
+      activity:
+        text:
+          - "Your training profile has been saved, {Topic.userName}! Here is a summary of what I have recorded:\n\n- **Name:** {Topic.userName}\n- **Gender:** {Topic.userGender}\n- **Age:** {Topic.userAge} years\n- **Weight:** {Topic.userWeightKg} kg\n- **Height:** {Topic.userHeightCm} cm\n- **Goals:** {Topic.userGoals}\n- **Injuries or limitations:** {Topic.userInjuries}\n- **Preferences:** {Topic.userPreferences}\n\nReady for me to generate your personalised training programme?"

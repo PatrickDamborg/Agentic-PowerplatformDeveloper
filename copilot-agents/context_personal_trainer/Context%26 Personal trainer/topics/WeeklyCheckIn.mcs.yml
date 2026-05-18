@@ -1,0 +1,111 @@
+mcs.metadata:
+  componentName: WeeklyCheckIn
+  description: Runs the user's weekly training check-in. Collects current weight, training highlights, challenges, pain, and adjustment requests. Evaluates progress using fitness knowledge and provides intelligent programme adjustments.
+kind: AdaptiveDialog
+modelDisplayName: Weekly Check-In
+modelDescription: Use this topic when the user wants to start their weekly check-in, review how their training went, or request adjustments to their programme. Collects weekly feedback and applies intelligent adjustments based on fitness methodology.
+inputs:
+  - kind: AutomaticTaskInput
+    propertyName: checkInUserName
+    description: The user's name for the weekly check-in.
+    entity: StringPrebuiltEntity
+    shouldPromptUser: true
+
+inputType:
+  properties:
+    checkInUserName:
+      displayName: User Name
+      description: The name used for the weekly check-in.
+      type: String
+
+beginDialog:
+  kind: OnRecognizedIntent
+  id: main
+  intent:
+    displayName: Weekly Check-In
+    triggerQueries:
+      - start my weekly check-in
+      - weekly check-in
+      - check in
+      - time for my check-in
+      - weekly checkin
+
+  actions:
+    - kind: SendActivity
+      id: sendMessage_opener_ci01
+      activity:
+        text:
+          - "Time for your weekly check-in! Let's see how the week went and adjust your programme if needed."
+
+    - kind: Question
+      id: question_checkInName_ci02
+      variable: init:Topic.checkInUserName
+      prompt: "What is your name?"
+      entity: StringPrebuiltEntity
+      alwaysPrompt: true
+      interruptionPolicy:
+        allowInterruption: false
+
+    - kind: Question
+      id: question_currentWeight_ci03
+      variable: init:Topic.currentWeight
+      prompt: "What is your current weight in kilograms?"
+      entity: NumberPrebuiltEntity
+      alwaysPrompt: true
+      interruptionPolicy:
+        allowInterruption: false
+
+    - kind: Question
+      id: question_highlights_ci04
+      variable: init:Topic.trainingHighlights
+      prompt: "How did your training go this week? Any highlights or wins?"
+      entity: StringPrebuiltEntity
+      alwaysPrompt: true
+      interruptionPolicy:
+        allowInterruption: false
+
+    - kind: Question
+      id: question_challenges_ci05
+      variable: init:Topic.trainingChallenges
+      prompt: "Any challenges, low points, or sessions you missed?"
+      entity: StringPrebuiltEntity
+      alwaysPrompt: true
+      interruptionPolicy:
+        allowInterruption: false
+
+    - kind: Question
+      id: question_pain_ci06
+      variable: init:Topic.painDiscomfort
+      prompt: "Are you experiencing any pain or discomfort? If so, please describe where and when it occurs. (Type 'none' if not applicable)"
+      entity: StringPrebuiltEntity
+      alwaysPrompt: true
+      interruptionPolicy:
+        allowInterruption: false
+
+    - kind: Question
+      id: question_adjustments_ci07
+      variable: init:Topic.adjustmentRequests
+      prompt: "Any adjustments you'd like to make to your programme? (e.g. add more cardio, reduce intensity, swap an exercise)"
+      entity: StringPrebuiltEntity
+      alwaysPrompt: true
+      interruptionPolicy:
+        allowInterruption: false
+
+    - kind: SendActivity
+      id: sendMessage_thinking_ci08
+      activity:
+        text:
+          - "Thanks for sharing all of that, {Topic.checkInUserName}. Let me review your week and determine the best adjustments..."
+
+    - kind: AnswerQuestionWithAI
+      id: evaluateCheckIn_ci09
+      displayName: Evaluate Check-In and Determine Adjustments
+      userInput: ="You are a personal trainer reviewing a weekly check-in for {Topic.checkInUserName}. Current weight this week: {Topic.currentWeight}kg. Training highlights: {Topic.trainingHighlights}. Challenges or missed sessions: {Topic.trainingChallenges}. Pain or discomfort: {Topic.painDiscomfort}. Requested adjustments: {Topic.adjustmentRequests}. Based on progressive overload principles and sports science: (1) Assess the week overall (positive framing), (2) Recommend any specific exercise adjustments (sets, reps, swaps) based on reported pain or missed sessions, (3) Provide a deload recommendation if multiple sessions were missed, (4) Give 2-3 specific focus points for the coming week. End with encouragement."
+      variable: init:Topic.adjustmentSummary
+      autoSend: false
+
+    - kind: SendActivity
+      id: sendMessage_summary_ci10
+      activity:
+        text:
+          - "Check-in complete for week {Topic.checkInUserName}!\n\n**This week's review and adjustments:**\n\n{Topic.adjustmentSummary}\n\nSee you next week — keep going!"

@@ -30,6 +30,7 @@ Domain knowledge lives in `.claude/skills/`. Load the relevant skill before star
 | `copilot-studio` | Building or modifying Copilot Studio agents, connected agents, or agent tools (Dataverse searchQuery, List rows, Power Automate flows) |
 | `microsoft-learn` | Deciding which Microsoft Learn MCP tool to use |
 | `browser-testing` | Verifying records or UI state using the Chrome MCP |
+| `model-driven-app` | Creating model-driven apps, updating forms (FormXml), updating views (FetchXml/LayoutXml) |
 | `deploy` | Deploying changes to GitHub |
 | `git-push` | Staging, committing, and pushing to remote |
 

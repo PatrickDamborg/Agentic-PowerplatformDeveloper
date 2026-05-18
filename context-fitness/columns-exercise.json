@@ -1,0 +1,62 @@
+[
+  {
+    "SchemaName": "context_dayofweek",
+    "Type": "Choice",
+    "DisplayName": "Day of Week",
+    "Description": "The day this exercise is scheduled within the weekly programme",
+    "Options": [
+      { "Label": "Monday",    "Value": 100000000 },
+      { "Label": "Tuesday",   "Value": 100000001 },
+      { "Label": "Wednesday", "Value": 100000002 },
+      { "Label": "Thursday",  "Value": 100000003 },
+      { "Label": "Friday",    "Value": 100000004 },
+      { "Label": "Saturday",  "Value": 100000005 },
+      { "Label": "Sunday",    "Value": 100000006 }
+    ]
+  },
+  {
+    "SchemaName": "context_sets",
+    "Type": "Integer",
+    "DisplayName": "Sets",
+    "Description": "Number of sets to perform",
+    "MinValue": 1,
+    "MaxValue": 20
+  },
+  {
+    "SchemaName": "context_reps",
+    "Type": "String",
+    "DisplayName": "Reps",
+    "Description": "Number of repetitions per set — free text to support ranges (8-12), time-based (30 sec), or open-ended (AMRAP)",
+    "MaxLength": 50
+  },
+  {
+    "SchemaName": "context_weightintensity",
+    "Type": "String",
+    "DisplayName": "Weight / Intensity",
+    "Description": "Load or intensity guidance — free text to support absolute (60 kg), relative (70% 1RM), or qualitative (Moderate, Bodyweight)",
+    "MaxLength": 100
+  },
+  {
+    "SchemaName": "context_restperiod",
+    "Type": "Integer",
+    "DisplayName": "Rest (seconds)",
+    "Description": "Recommended rest between sets in seconds",
+    "MinValue": 0,
+    "MaxValue": 600
+  },
+  {
+    "SchemaName": "context_sequence",
+    "Type": "Integer",
+    "DisplayName": "Sequence",
+    "Description": "Display order of this exercise within its scheduled day — lower numbers appear first",
+    "MinValue": 1,
+    "MaxValue": 99
+  },
+  {
+    "SchemaName": "context_exercisenotes",
+    "Type": "Memo",
+    "DisplayName": "Notes",
+    "Description": "Coaching cues, form tips, or exercise-specific instructions for the participant",
+    "MaxLength": 2000
+  }
+]

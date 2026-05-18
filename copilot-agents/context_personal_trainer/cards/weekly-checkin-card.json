@@ -1,0 +1,98 @@
+{
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "$comment": "Ready-to-use Adaptive Card template for the Weekly Training Check-In. Version: Adaptive Cards 1.5. To wire this card to the Weekly Check-In topic, replace the conversational Question nodes with a SendActivity node that renders this card, then map the submit action outputs to topic variables (currentWeight, trainingHighlights, trainingChallenges, painDiscomfort, adjustmentRequests).",
+  "type": "AdaptiveCard",
+  "version": "1.5",
+  "body": [
+    {
+      "type": "TextBlock",
+      "text": "Weekly Training Check-In",
+      "size": "Large",
+      "weight": "Bolder",
+      "color": "Accent"
+    },
+    {
+      "type": "TextBlock",
+      "text": "Let's review your week and keep your programme on track.",
+      "wrap": true,
+      "spacing": "Small"
+    },
+    {
+      "type": "TextBlock",
+      "text": "Current Weight (kg)",
+      "weight": "Bolder",
+      "spacing": "Medium"
+    },
+    {
+      "type": "Input.Number",
+      "id": "currentWeight",
+      "placeholder": "e.g. 74.2",
+      "min": 20,
+      "max": 300,
+      "isRequired": true,
+      "errorMessage": "Please enter your current weight in kg."
+    },
+    {
+      "type": "TextBlock",
+      "text": "Training Highlights",
+      "weight": "Bolder",
+      "spacing": "Medium"
+    },
+    {
+      "type": "Input.Text",
+      "id": "trainingHighlights",
+      "isMultiline": true,
+      "placeholder": "How did training go this week? Any wins or personal bests?",
+      "isRequired": true,
+      "errorMessage": "Please share at least one highlight."
+    },
+    {
+      "type": "TextBlock",
+      "text": "Challenges or Missed Sessions",
+      "weight": "Bolder",
+      "spacing": "Medium"
+    },
+    {
+      "type": "Input.Text",
+      "id": "trainingChallenges",
+      "isMultiline": true,
+      "placeholder": "Any sessions you missed, low-energy days, or struggles? Type 'none' if not applicable.",
+      "isRequired": true,
+      "errorMessage": "Please describe any challenges or type 'none'."
+    },
+    {
+      "type": "TextBlock",
+      "text": "Pain or Discomfort",
+      "weight": "Bolder",
+      "spacing": "Medium"
+    },
+    {
+      "type": "Input.Text",
+      "id": "painDiscomfort",
+      "isMultiline": true,
+      "placeholder": "Describe any pain or discomfort experienced during training. Type 'none' if not applicable."
+    },
+    {
+      "type": "TextBlock",
+      "text": "Requested Adjustments",
+      "weight": "Bolder",
+      "spacing": "Medium"
+    },
+    {
+      "type": "Input.Text",
+      "id": "adjustmentRequests",
+      "isMultiline": true,
+      "placeholder": "Would you like any changes to your programme? e.g. more cardio, reduce intensity, swap exercises."
+    }
+  ],
+  "actions": [
+    {
+      "type": "Action.Submit",
+      "title": "Submit Check-in",
+      "style": "positive",
+      "data": {
+        "actionType": "weeklyCheckIn"
+      }
+    }
+  ]
+}

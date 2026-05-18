@@ -1,0 +1,169 @@
+{
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "$comment": "Ready-to-use Adaptive Card template for collecting a Training Profile. Version: Adaptive Cards 1.5. To wire this card to the Create Training Profile topic, replace the conversational Question nodes with a SendActivity node that renders this card, then map the submit action outputs to topic variables.",
+  "type": "AdaptiveCard",
+  "version": "1.5",
+  "body": [
+    {
+      "type": "TextBlock",
+      "text": "Create Your Training Profile",
+      "size": "Large",
+      "weight": "Bolder",
+      "color": "Accent"
+    },
+    {
+      "type": "TextBlock",
+      "text": "Fill in the form below so I can build your personalised programme.",
+      "wrap": true,
+      "spacing": "Small"
+    },
+    {
+      "type": "TextBlock",
+      "text": "Full Name",
+      "weight": "Bolder",
+      "spacing": "Medium"
+    },
+    {
+      "type": "Input.Text",
+      "id": "userName",
+      "placeholder": "e.g. Alex Johnson",
+      "isRequired": true,
+      "errorMessage": "Please enter your full name."
+    },
+    {
+      "type": "TextBlock",
+      "text": "Gender",
+      "weight": "Bolder",
+      "spacing": "Medium"
+    },
+    {
+      "type": "Input.ChoiceSet",
+      "id": "userGender",
+      "style": "compact",
+      "isRequired": true,
+      "errorMessage": "Please select your gender.",
+      "choices": [
+        { "title": "Male", "value": "1" },
+        { "title": "Female", "value": "2" },
+        { "title": "Non-binary", "value": "3" },
+        { "title": "Prefer not to say", "value": "4" }
+      ]
+    },
+    {
+      "type": "ColumnSet",
+      "spacing": "Medium",
+      "columns": [
+        {
+          "type": "Column",
+          "width": "stretch",
+          "items": [
+            {
+              "type": "TextBlock",
+              "text": "Age (years)",
+              "weight": "Bolder"
+            },
+            {
+              "type": "Input.Number",
+              "id": "userAge",
+              "placeholder": "e.g. 30",
+              "min": 10,
+              "max": 100,
+              "isRequired": true,
+              "errorMessage": "Please enter a valid age (10-100)."
+            }
+          ]
+        },
+        {
+          "type": "Column",
+          "width": "stretch",
+          "items": [
+            {
+              "type": "TextBlock",
+              "text": "Weight (kg)",
+              "weight": "Bolder"
+            },
+            {
+              "type": "Input.Number",
+              "id": "userWeightKg",
+              "placeholder": "e.g. 75.5",
+              "min": 20,
+              "max": 300,
+              "isRequired": true,
+              "errorMessage": "Please enter your weight in kg."
+            }
+          ]
+        },
+        {
+          "type": "Column",
+          "width": "stretch",
+          "items": [
+            {
+              "type": "TextBlock",
+              "text": "Height (cm)",
+              "weight": "Bolder"
+            },
+            {
+              "type": "Input.Number",
+              "id": "userHeightCm",
+              "placeholder": "e.g. 178",
+              "min": 100,
+              "max": 250,
+              "isRequired": true,
+              "errorMessage": "Please enter your height in cm."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "TextBlock",
+      "text": "Fitness Goals",
+      "weight": "Bolder",
+      "spacing": "Medium"
+    },
+    {
+      "type": "Input.Text",
+      "id": "userGoals",
+      "isMultiline": true,
+      "placeholder": "e.g. Lose weight, build strength, run a 5K",
+      "isRequired": true,
+      "errorMessage": "Please describe your fitness goals."
+    },
+    {
+      "type": "TextBlock",
+      "text": "Injuries or Limitations",
+      "weight": "Bolder",
+      "spacing": "Medium"
+    },
+    {
+      "type": "Input.Text",
+      "id": "userInjuries",
+      "isMultiline": true,
+      "placeholder": "Describe any injuries, pain points, or limitations. Type 'none' if not applicable.",
+      "isRequired": true,
+      "errorMessage": "Please describe any injuries or type 'none'."
+    },
+    {
+      "type": "TextBlock",
+      "text": "Preferences",
+      "weight": "Bolder",
+      "spacing": "Medium"
+    },
+    {
+      "type": "Input.Text",
+      "id": "userPreferences",
+      "isMultiline": true,
+      "placeholder": "e.g. Gym equipment available, prefer mornings, 3 days per week"
+    }
+  ],
+  "actions": [
+    {
+      "type": "Action.Submit",
+      "title": "Save Profile",
+      "style": "positive",
+      "data": {
+        "actionType": "createTrainingProfile"
+      }
+    }
+  ]
+}

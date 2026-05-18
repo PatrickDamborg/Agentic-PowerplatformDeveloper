@@ -1,9 +1,9 @@
 ---
 name: copilot-studio
-description: Rules for building and maintaining Copilot Studio agents, connected agents, and agent tools for the XPM skill library. Load whenever authoring Copilot Studio YAML, wiring Dataverse tools, or integrating Power Automate flows as agent actions.
+description: Rules for building and maintaining Copilot Studio agents. Load whenever authoring Copilot Studio YAML, cloning/pushing agents, wiring Dataverse tools, or integrating Power Automate flows as agent actions.
 ---
 
-# Copilot Studio Agent Skills (XPM)
+# Copilot Studio Agent Skills
 
 Authoritative guidance for building the **XPM orchestrator agent and its three connected agents** (Risk Analyst, Status Reporting, Project Summarization). Every artefact must remain editable by clients in the Power Platform maker portal.
 
@@ -122,3 +122,89 @@ This repo extends Microsoft's experimental plugin rather than replacing it. The 
 - Solution membership: `.claude/skills/data-model/add-to-solution.ps1`, `publish-customizations.ps1`
 - Try/catch base: `flows/templates/try-catch-scope.json`
 - Error logging: `dashboard/log-activity.ps1`
+
+---
+
+## Cloned agent file structure
+
+When the Manage sub-agent clones an agent, it produces this structure under the agent folder:
+
+```
+copilot-agents/<slug>/<URL-encoded-display-name>/
+  agent.mcs.yml          # displayName, instructions, conversationStarters, gptCapabilities
+  settings.mcs.yml       # schemaName, auth, generative settings, template version
+  icon.png
+  .mcs/                  # gitignored — env credentials, changetoken, botdefinition.json
+  topics/
+    Greeting.mcs.yml     # system topics (13 default)
+    Fallback.mcs.yml
+    ConversationStart.mcs.yml
+    … (10 more system topics)
+```
+
+Custom topics go in `topics/` alongside system topics. Cards and other assets can live anywhere in the repo — they are not auto-synced; reference them in topic YAML or keep as workshop handouts.
+
+The agent's **schemaName** (e.g. `cr8e2_ContextPersonaltrainer`) is set at creation time in the Copilot Studio portal and cannot be changed locally.
+
+---
+
+## YAML schema — confirmed valid node kinds and property names
+
+These were validated against a live push to `pdausa.crm.dynamics.com` in May 2026. The Copilot Studio YAML schema is undocumented and evolves; verify via the Author sub-agent when in doubt.
+
+### Topic question kinds
+
+| Kind | Use for | Notes |
+|------|---------|-------|
+| `Question` | Collecting a single value conversationally | `variable` holds the answer |
+| `StringPrebuiltEntity` | Free-text or choice answers (entity type for Question nodes) | Use this for choice questions — `kind: EnumEntity` is **NOT valid** and will fail validation |
+| `AnswerQuestionWithAI` | Generative AI reasoning step within a topic | Requires `userInput:` (not `input:`); value must be a Power Fx string expression with `=` prefix |
+| `SetVariable` | Assign a variable value | Correct kind — `SetTextVariable` is **NOT valid** |
+| `SendActivity` | Send a message to the user | |
+| `InvokeConnectorAction` | Call a Power Platform connector action | See connection reference requirement below |
+
+### `AnswerQuestionWithAI` — correct property name
+
+```yaml
+- kind: AnswerQuestionWithAI
+  userInput: ="Evaluate this check-in data and suggest programme adjustments: {CheckInSummary}"
+```
+
+`input:` is wrong and will be rejected at push time.
+
+---
+
+## Connection references — REQUIRED before `InvokeConnectorAction` works
+
+`InvokeConnectorAction` (used for Dataverse connector calls like `List rows`, `Create row`, `Update row`) references a **connection reference** by logical name (e.g. `shared_commondataserviceforapps`). That connection reference must already exist in the target environment before the push succeeds.
+
+**If the connection reference has never been used in the environment:**
+- The push fails with: `A record with the specified key values does not exist in connectionreference entity`
+- Fix: Add the Dataverse connector manually through the Copilot Studio UI (Settings → Connections or via an action in the maker portal), then re-push
+
+**Workaround when connection reference is not yet registered:** Use `AnswerQuestionWithAI` nodes for the affected steps and leave a TODO comment; the generative AI will handle the data interaction conversationally until the connection is wired up.
+
+---
+
+## Scheduled triggers — NOT supported in YAML schema
+
+Scheduled (time-based) triggers cannot be defined in the Copilot Studio `.mcs.yml` files. The YAML schema has no `scheduledTrigger` node kind.
+
+**Correct approach:** Create a Power Automate cloud flow with a Recurrence trigger. In the flow, call the Copilot Studio agent's conversation start API or use the Copilot Studio connector to send a proactive message.
+
+Topics that need to be scheduled should still be authored as standard topics with manual trigger phrases (so they can be tested by hand), with a note that production scheduling is handled via Power Automate.
+
+---
+
+## Dataverse MCP server vs. Dataverse connector
+
+These are two distinct integration paths — do not confuse them:
+
+| | Dataverse MCP server | Dataverse connector (`shared_commondataserviceforapps`) |
+|--|--|--|
+| **Setup** | Added via Copilot Studio UI → Tools → Add a tool → Dataverse | Added via Copilot Studio UI → Connections |
+| **YAML representation** | Not yet representable in `.mcs.yml` — configured in the portal only | `InvokeConnectorAction` node in topic YAML |
+| **Auth** | Maker-provided (environment-level) | Per-user or maker-provided depending on auth mode |
+| **Best for** | Workshop demos where participants add it manually; quick search/read | Structured CRUD with specific columns, filters, pagination |
+
+For workshop scenarios where participants add the Dataverse MCP themselves, do not add `InvokeConnectorAction` nodes in the pre-built agent — the participants wire MCP in the UI. Instead, author topics that use `AnswerQuestionWithAI` with clear prompts describing the Dataverse operation; once MCP is connected the agent's generative orchestration will route through it automatically.
