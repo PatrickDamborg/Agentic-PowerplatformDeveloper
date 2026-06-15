@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<!--
+  Context& · Agent Chat Side Pane  v2.0
+  Loaded by Xrm.App.sidePanes.createPane() inside the model-driven app.
+  Query params (via ?data= wrapper from MDA):
+    url              — canvas embed URL
+    agent            — display name
+    monitoredAgentId — pda_monitoredagentid GUID (for session record)
+    sessionId        — existing pda_agentsessionid to resume (optional)
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent Chat</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;}
+body{display:flex;flex-direction:column;background:#f1f5f7;font-family:'Share Tech Mono','Courier New',monospace;}
+
+.head{
+  flex:none;padding:9px 14px;
+  background:#fff;border-bottom:2px solid #5500FF;
+  display:flex;align-items:center;gap:10px;
+}
+.head .tag{
+  font-family:'VT323',monospace;font-size:13px;letter-spacing:0.1em;
+  text-transform:uppercase;color:#5500FF;border:1px solid #5500FF;padding:2px 6px 1px;
+}
+.head .title{
+  font-family:'VT323',monospace;font-size:17px;letter-spacing:0.05em;
+  color:#000;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.head .resume-badge{
+  font-size:10px;color:#1E8C7F;border:1px solid #1E8C7F;
+  padding:2px 6px;white-space:nowrap;display:none;
+}
+.head .bubble{
+  font-size:11px;color:#00B6FF;border:1px solid #00B6FF;
+  padding:2px 7px;white-space:nowrap;
+  animation:blink-fade 2s ease-in-out infinite;
+}
+@keyframes blink-fade{0%,100%{opacity:1}50%{opacity:.4}}
+
+.frame-wrap{flex:1;overflow:hidden;position:relative;}
+iframe{width:100%;height:100%;border:none;display:block;}
+
+.error-msg{
+  padding:28px 20px;font-size:13px;color:#FF922D;
+  border:1px dashed #FF922D;margin:20px;
+}
+</style>
+</head>
+<body>
+<div class="head">
+  <span class="tag">Copilot</span>
+  <span class="title" id="agentTitle">Agent</span>
+  <span class="resume-badge" id="resumeBadge">Resumed</span>
+  <span class="bubble" id="statusBubble">Connecting…</span>
+</div>
+<div class="frame-wrap" id="frameWrap">
+  <iframe id="agentFrame" src="" allow="microphone; camera" allowfullscreen
+    title="Agent chat canvas"></iframe>
+</div>
+
+<script>
+"use strict";
+
+const GERUNDS = [
+  "Sautéing…","Mozeying…","Wrangling…","Percolating…","Rummaging…",
+  "Marinating…","Cogitating…","Perambulating…","Simmering…","Yodeling…",
+  "Spelunking…","Ruminating…","Cavorting…","Deliberating…","Oscillating…"
+];
+
+// MDA wraps our data string as a single ?data= param — parse inner key=value pairs from it
+const outer          = new URLSearchParams(window.location.search);
+const inner          = new URLSearchParams(outer.get("data") || window.location.search);
+const canvasUrl      = inner.get("url");
+const agentName      = inner.get("agent");
+const monitoredAgentId = inner.get("monitoredAgentId"); // pda_monitoredagentid GUID
+const existingSessionId = inner.get("sessionId");        // resume an existing session
+
+if (agentName) document.getElementById("agentTitle").textContent = agentName.toUpperCase();
+
+const bubble = document.getElementById("statusBubble");
+const resumeBadge = document.getElementById("resumeBadge");
+
+if (existingSessionId) {
+  resumeBadge.style.display = "block";
+}
+
+// Rotate gerunds while connecting
+let gerundTimer = setInterval(() => {
+  bubble.textContent = GERUNDS[Math.floor(Math.random() * GERUNDS.length)];
+}, 1800);
+
+// ── Dataverse helpers ──────────────────────────────────────────────────────
+function getClientUrl() {
+  try {
+    const xrm = window.parent?.Xrm;
+    const url = xrm?.Utility?.getGlobalContext?.()?.getClientUrl?.();
+    if (url) return url.replace(/\/$/, "");
+  } catch (_) {}
+  return window.location.origin;
+}
+
+async function dvPost(entitySet, body) {
+  const base = getClientUrl();
+  console.log("[pda_agentchat] dvPost →", entitySet, "base:", base);
+  try {
+    const res = await fetch(`${base}/api/data/v9.2/${entitySet}`, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "OData-MaxVersion": "4.0",
+        "OData-Version": "4.0"
+      },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) {
+      const txt = await res.text().catch(() => "");
+      console.error("[pda_agentchat] dvPost failed", res.status, txt.slice(0, 200));
+      return null;
+    }
+    const loc = res.headers.get("OData-EntityId") || "";
+    const m = loc.match(/\(([^)]+)\)$/);
+    const id = m ? m[1] : null;
+    console.log("[pda_agentchat] dvPost created:", id);
+    return id;
+  } catch (err) {
+    console.error("[pda_agentchat] dvPost exception:", err.message);
+    return null;
+  }
+}
+
+async function dvPatch(entitySet, id, body) {
+  const base = getClientUrl();
+  try {
+    await fetch(`${base}/api/data/v9.2/${entitySet}(${id})`, {
+      method: "PATCH",
+      credentials: "same-origin",
+      headers: {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "OData-MaxVersion": "4.0",
+        "OData-Version": "4.0"
+      },
+      body: JSON.stringify(body),
+      keepalive: true
+    });
+  } catch (_) {}
+}
+
+// ── Session management ──────────────────────────────────────────────────────
+let activeSessionId = existingSessionId || null;
+let conversationCaptured = false;
+
+function buildResumeUrl(base, convId) {
+  const sep = base.includes("?") ? "&" : "?";
+  return `${base}${sep}conversationId=${encodeURIComponent(convId)}`;
+}
+
+async function onConversationStarted(convId) {
+  if (!monitoredAgentId) return;
+
+  if (activeSessionId) {
+    // Resuming an existing session — just keep lastactivity current
+    dvPatch("pda_agentsessions", activeSessionId, {
+      pda_lastactivity: new Date().toISOString()
+    });
+    return;
+  }
+
+  // New session — create record
+  if (!canvasUrl) return;
+  const resumeUrl = buildResumeUrl(canvasUrl, convId);
+  const id = await dvPost("pda_agentsessions", {
+    pda_name:               `${agentName || "Agent"} – ${new Date().toISOString()}`,
+    pda_monitoredagentguid: monitoredAgentId,
+    pda_agentname:          agentName || "",
+    pda_conversationid:     convId,
+    pda_starttime:          new Date().toISOString(),
+    pda_lastactivity:       new Date().toISOString(),
+    pda_resumeurl:          resumeUrl
+  });
+  if (id) activeSessionId = id;
+}
+
+async function onUserMessage() {
+  if (!activeSessionId) return;
+  dvPatch("pda_agentsessions", activeSessionId, {
+    pda_lastactivity: new Date().toISOString()
+  });
+}
+
+// ── postMessage listener (canvas → this pane) ─────────────────────────────
+window.__msgLog = [];  // diagnostic: stores last 20 raw messages for inspection
+
+window.addEventListener("message", (evt) => {
+  try {
+    const raw = typeof evt.data === "string" ? evt.data : JSON.stringify(evt.data);
+    window.__msgLog.push({ origin: evt.origin, data: raw.slice(0, 400) });
+    if (window.__msgLog.length > 20) window.__msgLog.shift();
+
+    const d = typeof evt.data === "string" ? JSON.parse(evt.data) : evt.data;
+    if (!d) return;
+    const act = d.activity || d;
+
+    console.log("[pda_agentchat] postMessage from", evt.origin, "type:", act.type, "convId:", act.conversation?.id || "(none)");
+
+    // Capture conversation ID from first activity that carries it
+    if (!conversationCaptured && act.conversation?.id) {
+      conversationCaptured = true;
+      console.log("[pda_agentchat] onConversationStarted →", act.conversation.id);
+      onConversationStarted(act.conversation.id);
+    }
+
+    // Update lastactivity on every user message
+    if (act.type === "message" && (act.from?.role === "user" || act.from?.id === "user")) {
+      onUserMessage();
+    }
+  } catch (_) {}
+});
+
+// ── Load canvas ─────────────────────────────────────────────────────────────
+if (canvasUrl) {
+  const frame = document.getElementById("agentFrame");
+
+  frame.addEventListener("load", () => {
+    clearInterval(gerundTimer);
+    bubble.style.animation = "none";
+    bubble.style.color = "#1E8C7F";
+    bubble.style.borderColor = "#1E8C7F";
+    bubble.textContent = existingSessionId ? "Resumed" : "Connected";
+    setTimeout(() => { bubble.style.opacity = "0"; bubble.style.transition = "opacity .5s"; }, 3000);
+  });
+
+  frame.src = canvasUrl;
+} else {
+  clearInterval(gerundTimer);
+  document.getElementById("frameWrap").innerHTML =
+    '<div class="error-msg">No agent URL configured. Set <code>pda_embedurl</code> on the monitored agent record in Dataverse.</div>';
+  bubble.textContent = "No URL";
+  bubble.style.color = "#FF922D";
+  bubble.style.borderColor = "#FF922D";
+}
+</script>
+</body>
+</html>
