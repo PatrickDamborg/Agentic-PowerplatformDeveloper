@@ -1,0 +1,308 @@
+{
+  "schemaVersion": "1.0.0.0",
+  "_comment": "NGI Sales Order Processing — MVP flow. Triggers on email to shared mailbox. For each PDF attachment: AI Builder Prompt 1 (aibuilderpredict_customprompt via shared_commondataserviceforapps) extracts fields as JSON schema dump, AI Builder Prompt 2 (Claude, same connector) generates XML with per-field confidence scores, XML is written to SharePoint. Errors logged to pda_errorlogs and emailed. Connection refs: shared_office365 (pda_office365Outlook), shared_sharepointonline (cr8e2_NGISalesOrder.cr.3x3kvvbb), shared_commondataserviceforapps (pum_sharedcommondataserviceforapps_1479b) — NO separate AI Builder connection reference needed. Env vars: pda_NGI_SharedMailbox, pda_NGI_SharePointSite, pda_NGI_SharePointLibrary, pda_NGI_AIBuilderPrompt1Id (Dataverse recordId GUID of Prompt 1 model), pda_NGI_AIBuilderPrompt2Id (Dataverse recordId GUID of Prompt 2 model). AI Builder action pattern confirmed from designer: operationId=aibuilderpredict_customprompt on shared_commondataserviceforapps, params: recordId=<promptGuid>, item/requestv2/<InputName>=<value>. Response path confirmed by MS docs: body(action)?['responsev2']?['predictionOutput']?['text']. FILE INPUT FORMAT: document inputs in aibuilderpredict_customprompt take the base64 content bytes directly as item/requestv2/<InputName> — verify in the designer by inspecting a document-input prompt action and adjust if the format differs.",
+  "properties": {
+    "connectionReferences": {
+      "shared_office365": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "pda_office365Outlook"
+        },
+        "api": {
+          "name": "shared_office365"
+        }
+      },
+      "shared_sharepointonline": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "cr8e2_NGISalesOrder.cr.3x3kvvbb"
+        },
+        "api": {
+          "name": "shared_sharepointonline"
+        }
+      },
+      "shared_commondataserviceforapps": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "pum_sharedcommondataserviceforapps_1479b"
+        },
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "pda_NGI_SharedMailbox (pda_NGI_SharedMailbox)": {
+          "defaultValue": "",
+          "type": "String",
+          "metadata": {
+            "schemaName": "pda_NGI_SharedMailbox"
+          }
+        },
+        "pda_NGI_SharePointSite (pda_NGI_SharePointSite)": {
+          "defaultValue": "",
+          "type": "String",
+          "metadata": {
+            "schemaName": "pda_NGI_SharePointSite"
+          }
+        },
+        "pda_NGI_SharePointLibrary (pda_NGI_SharePointLibrary)": {
+          "defaultValue": "",
+          "type": "String",
+          "metadata": {
+            "schemaName": "pda_NGI_SharePointLibrary"
+          }
+        },
+        "pda_NGI_AIBuilderPrompt1Id (pda_NGI_AIBuilderPrompt1Id)": {
+          "defaultValue": "",
+          "type": "String",
+          "metadata": {
+            "schemaName": "pda_NGI_AIBuilderPrompt1Id"
+          }
+        },
+        "pda_NGI_AIBuilderPrompt2Id (pda_NGI_AIBuilderPrompt2Id)": {
+          "defaultValue": "",
+          "type": "String",
+          "metadata": {
+            "schemaName": "pda_NGI_AIBuilderPrompt2Id"
+          }
+        }
+      },
+      "triggers": {
+        "When_a_new_email_arrives": {
+          "type": "OpenApiConnectionNotification",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_office365",
+              "operationId": "OnNewEmailV3",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+            },
+            "parameters": {
+              "mailboxAddress": "@parameters('pda_NGI_SharedMailbox (pda_NGI_SharedMailbox)')",
+              "fetchOnlyWithAttachment": true,
+              "includeAttachments": true,
+              "importance": "Any"
+            },
+            "authentication": "@parameters('$authentication')"
+          },
+          "splitOn": "@triggerOutputs()?['body/value']"
+        }
+      },
+      "actions": {
+        "For_Each_Attachment": {
+          "type": "Foreach",
+          "runAfter": {},
+          "foreach": "@triggerOutputs()?['body/attachments']",
+          "actions": {
+            "Is_PDF": {
+              "type": "If",
+              "runAfter": {},
+              "expression": {
+                "or": [
+                  {
+                    "contains": [
+                      "@toLower(items('For_Each_Attachment')?['contentType'])",
+                      "pdf"
+                    ]
+                  },
+                  {
+                    "endsWith": [
+                      "@toLower(items('For_Each_Attachment')?['name'])",
+                      ".pdf"
+                    ]
+                  }
+                ]
+              },
+              "actions": {
+                "Try_Scope": {
+                  "type": "Scope",
+                  "runAfter": {},
+                  "actions": {
+                    "AI_Builder_Schema_Extraction": {
+                      "type": "OpenApiConnection",
+                      "runAfter": {},
+                      "inputs": {
+                        "host": {
+                          "connectionName": "shared_commondataserviceforapps",
+                          "operationId": "aibuilderpredict_customprompt",
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                        },
+                        "parameters": {
+                          "recordId": "@parameters('pda_NGI_AIBuilderPrompt1Id (pda_NGI_AIBuilderPrompt1Id)')",
+                          "item/requestv2/file_content": "@items('For_Each_Attachment')?['contentBytes']"
+                        },
+                        "authentication": "@parameters('$authentication')"
+                      }
+                    },
+                    "Parse_Schema_Dump": {
+                      "type": "ParseJson",
+                      "runAfter": {
+                        "AI_Builder_Schema_Extraction": ["Succeeded"]
+                      },
+                      "inputs": {
+                        "content": "@body('AI_Builder_Schema_Extraction')?['responsev2']?['predictionOutput']?['text']",
+                        "schema": {
+                          "type": "object",
+                          "properties": {
+                            "CustomerName": { "type": ["string", "null"] },
+                            "ExternalDocumentNo": { "type": ["string", "null"] },
+                            "DocumentDate": { "type": ["string", "null"] },
+                            "RequestedDeliveryDate": { "type": ["string", "null"] },
+                            "SellToAddress": { "type": ["string", "null"] },
+                            "PaymentTerms": { "type": ["string", "null"] },
+                            "ShippingMethod": { "type": ["string", "null"] },
+                            "Currency": { "type": ["string", "null"] },
+                            "Lines": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "ItemDescription": { "type": ["string", "null"] },
+                                  "Quantity": { "type": ["number", "null"] },
+                                  "UnitOfMeasure": { "type": ["string", "null"] },
+                                  "UnitPrice": { "type": ["number", "null"] },
+                                  "LineDiscountPct": { "type": ["number", "null"] },
+                                  "LineRequestedDeliveryDate": { "type": ["string", "null"] }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "AI_Builder_XML_Generation": {
+                      "type": "OpenApiConnection",
+                      "runAfter": {
+                        "Parse_Schema_Dump": ["Succeeded"]
+                      },
+                      "inputs": {
+                        "host": {
+                          "connectionName": "shared_commondataserviceforapps",
+                          "operationId": "aibuilderpredict_customprompt",
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                        },
+                        "parameters": {
+                          "recordId": "@parameters('pda_NGI_AIBuilderPrompt2Id (pda_NGI_AIBuilderPrompt2Id)')",
+                          "item/requestv2/text_input": "@body('AI_Builder_Schema_Extraction')?['responsev2']?['predictionOutput']?['text']"
+                        },
+                        "authentication": "@parameters('$authentication')"
+                      }
+                    },
+                    "Compose_XML_Filename": {
+                      "type": "Compose",
+                      "runAfter": {
+                        "AI_Builder_XML_Generation": ["Succeeded"]
+                      },
+                      "inputs": "@{if(empty(body('Parse_Schema_Dump')?['ExternalDocumentNo']), 'UNKNOWN', replace(replace(string(body('Parse_Schema_Dump')?['ExternalDocumentNo']), '/', '-'), ' ', '_'))}_@{formatDateTime(utcNow(), 'yyyyMMddHHmmss')}.xml"
+                    },
+                    "Create_XML_File": {
+                      "type": "OpenApiConnection",
+                      "runAfter": {
+                        "Compose_XML_Filename": ["Succeeded"]
+                      },
+                      "inputs": {
+                        "host": {
+                          "connectionName": "shared_sharepointonline",
+                          "operationId": "CreateFile",
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                        },
+                        "parameters": {
+                          "dataset": "@parameters('pda_NGI_SharePointSite (pda_NGI_SharePointSite)')",
+                          "folderPath": "@parameters('pda_NGI_SharePointLibrary (pda_NGI_SharePointLibrary)')",
+                          "name": "@outputs('Compose_XML_Filename')",
+                          "body": "@body('AI_Builder_XML_Generation')?['responsev2']?['predictionOutput']?['text']"
+                        },
+                        "authentication": "@parameters('$authentication')"
+                      }
+                    }
+                  }
+                },
+                "Catch_Scope": {
+                  "type": "Scope",
+                  "runAfter": {
+                    "Try_Scope": ["Failed", "TimedOut"]
+                  },
+                  "actions": {
+                    "Compose_Error_Envelope": {
+                      "type": "Compose",
+                      "runAfter": {},
+                      "inputs": {
+                        "flowName": "@workflow()?['tags']['flowDisplayName']",
+                        "runId": "@workflow()?['run']['name']",
+                        "failedStep": "@first(result('Try_Scope'))?['name']",
+                        "errorMessage": "@first(result('Try_Scope'))?['error']?['message']",
+                        "errorCode": "@first(result('Try_Scope'))?['error']?['code']",
+                        "severity": "Error",
+                        "contextJson": "@{string(createArray('emailSubject', triggerOutputs()?['body/subject'], 'emailFrom', triggerOutputs()?['body/from'], 'attachmentName', items('For_Each_Attachment')?['name']))}"
+                      }
+                    },
+                    "Create_ErrorLog_Row": {
+                      "type": "OpenApiConnection",
+                      "runAfter": {
+                        "Compose_Error_Envelope": ["Succeeded"]
+                      },
+                      "inputs": {
+                        "host": {
+                          "connectionName": "shared_commondataserviceforapps",
+                          "operationId": "CreateRecord",
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                        },
+                        "parameters": {
+                          "entityName": "pda_errorlogs",
+                          "item/pda_name": "@{concat('[Error] ', outputs('Compose_Error_Envelope')?['flowName'], ' — ', outputs('Compose_Error_Envelope')?['failedStep'])}",
+                          "item/pda_flowname": "@outputs('Compose_Error_Envelope')?['flowName']",
+                          "item/pda_runid": "@outputs('Compose_Error_Envelope')?['runId']",
+                          "item/pda_failedstep": "@outputs('Compose_Error_Envelope')?['failedStep']",
+                          "item/pda_errormessage": "@outputs('Compose_Error_Envelope')?['errorMessage']",
+                          "item/pda_errorcode": "@outputs('Compose_Error_Envelope')?['errorCode']",
+                          "item/pda_severity": 100000002,
+                          "item/pda_contextjson": "@outputs('Compose_Error_Envelope')?['contextJson']"
+                        },
+                        "authentication": "@parameters('$authentication')"
+                      }
+                    },
+                    "Send_Error_Notification": {
+                      "type": "OpenApiConnection",
+                      "runAfter": {
+                        "Create_ErrorLog_Row": ["Succeeded", "Failed", "TimedOut", "Skipped"]
+                      },
+                      "inputs": {
+                        "host": {
+                          "connectionName": "shared_office365",
+                          "operationId": "SendEmailV2",
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+                        },
+                        "parameters": {
+                          "emailMessage/To": "pda@contextand.com",
+                          "emailMessage/Subject": "@{concat('[Error] NGI Sales Order Processing failed — ', items('For_Each_Attachment')?['name'])}",
+                          "emailMessage/Body": "@{concat('<html><body style=\"font-family:Segoe UI,sans-serif;font-size:14px\"><h2 style=\"color:#C0392B\">&#9888; Sales Order Processing Failed</h2><table cellpadding=\"6\"><tr><td><b>Flow</b></td><td>', outputs('Compose_Error_Envelope')?['flowName'], '</td></tr><tr><td><b>Failed step</b></td><td>', outputs('Compose_Error_Envelope')?['failedStep'], '</td></tr><tr><td><b>Email from</b></td><td>', triggerOutputs()?['body/from'], '</td></tr><tr><td><b>Email subject</b></td><td>', triggerOutputs()?['body/subject'], '</td></tr><tr><td><b>Attachment</b></td><td>', items('For_Each_Attachment')?['name'], '</td></tr></table><h3>Error</h3><pre style=\"background:#f4f4f4;padding:12px\">', outputs('Compose_Error_Envelope')?['errorMessage'], '</pre></body></html>')}",
+                          "emailMessage/Importance": "High"
+                        },
+                        "authentication": "@parameters('$authentication')"
+                      }
+                    }
+                  }
+                }
+              },
+              "else": {
+                "actions": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "templateName": ""
+  }
+}

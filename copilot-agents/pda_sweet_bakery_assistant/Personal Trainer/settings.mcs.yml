@@ -1,24 +1,17 @@
-﻿displayName: Context And Personal Training
-schemaName: cr8e2_ContextPersonaltrainer
+displayName: Sweet Bakery Assistant
+schemaName: cr8e2_PersonalTrainer
 accessControlPolicy: GroupMembership
 authenticationMode: Integrated
 authenticationTrigger: Always
 configuration:
-  channels:
-    - channelId: MsTeams
-
-    - channelId: Microsoft365Copilot
-
   settings:
     GenerativeActionsEnabled: true
     SmartTaskCompletionEnabled: true
 
   isAgentConnectable: true
-  publishOnImport: true
   gPTSettings:
-    defaultSchemaName: cr8e2_ContextPersonaltrainer.gpt.default
+    defaultSchemaName: cr8e2_PersonalTrainer.gpt.default
 
-  isLightweightBot: false
   aISettings:
     useModelKnowledge: true
     isFileAnalysisEnabled: true
@@ -27,8 +20,7 @@ configuration:
     optInUseLatestModels: false
 
   recognizer:
-    kind: CLIAgentRecognizer
+    kind: GenerativeAIRecognizer
 
-publishedOn: 2026-05-19T12:49:30.0000000Z
 template: default-2.1.0
 language: 1033

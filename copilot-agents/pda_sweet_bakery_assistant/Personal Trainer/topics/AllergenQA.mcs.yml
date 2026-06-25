@@ -1,0 +1,48 @@
+mcs.metadata:
+  componentName: Allergen Q&A
+  description: Answers customer questions about allergens, ingredients, and dietary suitability. Uses the List Bakery Products tool to look up the pda_allergens field for the relevant product.
+kind: AdaptiveDialog
+modelDisplayName: Allergen Q&A
+modelDescription: Use this topic when the customer asks about allergens, ingredients, dietary suitability, or whether a product contains specific substances such as gluten, nuts, dairy, or eggs. Call the List Bakery Products tool to look up the allergen information and provide accurate, specific answers about which products contain which allergens.
+inputs:
+  - kind: AutomaticTaskInput
+    propertyName: allergenQuery
+    description: What the customer wants to know about allergens — e.g. the specific allergen (nuts, gluten, dairy) or the product they are asking about.
+    entity: StringPrebuiltEntity
+    shouldPromptUser: false
+
+inputType:
+  properties:
+    allergenQuery:
+      displayName: Allergen Query
+      description: The allergen or product the customer is asking about.
+      type: String
+
+beginDialog:
+  kind: OnRecognizedIntent
+  id: main
+  intent:
+    displayName: Allergen Q&A
+    includeInOnSelectIntent: true
+    triggerQueries:
+      - does it contain nuts
+      - allergen information
+      - allergens
+      - is it gluten free
+      - gluten free options
+      - do you have dairy free
+      - contains milk
+      - nut allergy
+      - is it vegan
+      - what's in it
+      - ingredients
+      - suitable for vegetarians
+    modelDescription: Triggered when the customer asks about allergens, ingredients, dietary suitability, or whether a product contains specific substances such as gluten, nuts, dairy, or eggs.
+
+  actions:
+    - kind: SendActivity
+      id: sendMessage_allergen_intro
+      activity: Great question! Let me check the allergen information in our product catalog for you.
+
+    - kind: CancelAllDialogs
+      id: cancelAllDialogs_allergen_end

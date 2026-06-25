@@ -1,0 +1,46 @@
+mcs.metadata:
+  componentName: Browse Menu
+  description: Triggered when the customer wants to see the bakery menu or asks what products are available. Uses the List Bakery Products tool to fetch the live product catalog from Dataverse and presents it in a friendly format grouped by category.
+kind: AdaptiveDialog
+modelDisplayName: Browse Menu
+modelDescription: Use this topic when the customer wants to see the bakery menu, browse available products, or asks what the bakery sells. Call the List Bakery Products tool to fetch all currently available products including names, categories, prices, descriptions, and allergen information. Present the results in a warm, friendly format grouped by category.
+inputs:
+  - kind: AutomaticTaskInput
+    propertyName: menuRequest
+    description: What the customer wants to see from the menu — e.g. "everything", "breads only", "cakes", or a specific product name.
+    entity: StringPrebuiltEntity
+    shouldPromptUser: false
+
+inputType:
+  properties:
+    menuRequest:
+      displayName: Menu Request
+      description: What the customer wants to see from the menu.
+      type: String
+
+beginDialog:
+  kind: OnRecognizedIntent
+  id: main
+  intent:
+    displayName: Browse Menu
+    includeInOnSelectIntent: true
+    triggerQueries:
+      - what do you have
+      - show me the menu
+      - menu
+      - what breads do you sell
+      - what cakes do you have
+      - what products do you sell
+      - show me your products
+      - what's available
+      - what are your baked goods
+      - what can I order
+    modelDescription: Triggered when the customer wants to browse the bakery menu, see what products are available, or asks about what the bakery sells.
+
+  actions:
+    - kind: SendActivity
+      id: sendMessage_menu_intro
+      activity: Let me pull up our freshly baked menu for you right now!
+
+    - kind: CancelAllDialogs
+      id: cancelAllDialogs_menu_end

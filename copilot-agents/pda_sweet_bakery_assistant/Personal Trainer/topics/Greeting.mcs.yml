@@ -1,0 +1,27 @@
+mcs.metadata:
+  componentName: Greeting
+  description: This topic is triggered when the user greets the agent.
+kind: AdaptiveDialog
+beginDialog:
+  kind: OnRecognizedIntent
+  id: main
+  intent:
+    displayName: Greeting
+    includeInOnSelectIntent: false
+    triggerQueries:
+      - Good afternoon
+      - Good morning
+      - Hello
+      - Hey
+      - Hi
+    modelDescription: Triggered when the customer greets the assistant with a hello, hi, or similar salutation.
+
+  actions:
+    - kind: SendActivity
+      id: sendMessage_abmysR
+      activity:
+        text:
+          - Hello! Welcome to Hempel Sweet Bakery! I can help you browse our menu, answer questions about allergens and ingredients, or place an order for pickup or delivery. How can I help you today?
+
+    - kind: CancelAllDialogs
+      id: cancelAllDialogs_01At22

@@ -1,0 +1,16 @@
+# Auth session — contains live M365/Dataverse cookies. NEVER commit.
+.auth/
+
+# Playwright capture artifacts
+test-results/
+playwright-report/
+
+# Rendered videos
+*.mp4
+*.webm
+
+# Deps
+node_modules/
+
+# TTS audio cache
+.recast-cache/

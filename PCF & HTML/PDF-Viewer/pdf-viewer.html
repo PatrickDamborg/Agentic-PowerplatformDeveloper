@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PDF Viewer</title>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            background: transparent;
+            color: #323130;
+        }
+        #app {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            box-sizing: border-box;
+        }
+
+        /* ---- Compact action card ---- */
+        #card {
+            flex: 0 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            background: #ffffff;
+            border: 1px solid #e1dfdd;
+            border-radius: 4px;
+        }
+        #icon {
+            flex: 0 0 auto;
+            width: 36px;
+            height: 44px;
+            border-radius: 3px;
+            background: #d13438;
+            color: #fff;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            padding-bottom: 5px;
+            box-sizing: border-box;
+        }
+        #meta {
+            flex: 1 1 auto;
+            min-width: 0;
+        }
+        #fileName {
+            font-weight: 600;
+            font-size: 14px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        #subText {
+            font-size: 12px;
+            color: #605e5c;
+            margin-top: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        #actions {
+            flex: 0 0 auto;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+        .btn {
+            border: 1px solid #8a8886;
+            background: #ffffff;
+            color: #323130;
+            padding: 6px 12px;
+            font-size: 13px;
+            border-radius: 2px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .btn:hover:not(:disabled) { background: #f3f2f1; }
+        .btn.primary {
+            background: #0078d4;
+            border-color: #0078d4;
+            color: #ffffff;
+        }
+        .btn.primary:hover:not(:disabled) { background: #106ebe; }
+        .btn:disabled { opacity: 0.5; cursor: default; }
+
+        /* ---- Inline preview (optional) ---- */
+        #preview {
+            flex: 1 1 auto;
+            min-height: 480px;
+            margin-top: 10px;
+            position: relative;
+            border: 1px solid #e1dfdd;
+            border-radius: 4px;
+            overflow: hidden;
+            background: #faf9f8;
+        }
+        #preview.collapsed { display: none; }
+        #pdfObject {
+            width: 100%;
+            height: 100%;
+            border: 0;
+            display: block;
+        }
+
+        /* ---- Status / messages ---- */
+        #status {
+            font-size: 12px;
+            margin-top: 6px;
+            min-height: 16px;
+        }
+        #status.error { color: #a4262c; }
+        .spinner {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid #c8c6c4;
+            border-top-color: #0078d4;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            vertical-align: middle;
+            margin-right: 6px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div id="card">
+            <div id="icon">PDF</div>
+            <div id="meta">
+                <div id="fileName">PDF document</div>
+                <div id="subText">Attached to this record</div>
+            </div>
+            <div id="actions">
+                <button id="openWindowBtn" class="btn primary">Open in window</button>
+                <button id="openTabBtn" class="btn">New tab</button>
+                <button id="downloadBtn" class="btn">Download</button>
+                <button id="previewBtn" class="btn">Hide preview</button>
+            </div>
+        </div>
+        <div id="status"></div>
+        <div id="preview">
+            <object id="pdfFrame" type="application/pdf" data="" title="PDF document">
+                <p style="padding:20px;color:#605e5c;font-size:13px">
+                    Your browser cannot display the PDF inline.
+                    <a id="pdfFallbackLink" href="#" style="color:#0078d4">Open the file</a> to view it.
+                </p>
+            </object>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        "use strict";
+
+        // ---- Configuration -------------------------------------------------
+        var ENTITY_SET = "ngi_salesorders";   // plural Web API set name
+        var FILE_COLUMN = "ngi_attachment";    // File-type column
+        var FILE_NAME_COLUMN = "ngi_attachment_name";
+        var API_VERSION = "v9.2";
+        // --------------------------------------------------------------------
+
+        var els = {
+            icon: document.getElementById("icon"),
+            fileName: document.getElementById("fileName"),
+            subText: document.getElementById("subText"),
+            openWindowBtn: document.getElementById("openWindowBtn"),
+            openTabBtn: document.getElementById("openTabBtn"),
+            downloadBtn: document.getElementById("downloadBtn"),
+            previewBtn: document.getElementById("previewBtn"),
+            preview: document.getElementById("preview"),
+            frame: document.getElementById("pdfFrame"),
+            status: document.getElementById("status")
+        };
+
+        var objectUrl = null;     // cached blob URL once fetched
+        var fetchPromise = null;  // in-flight / completed fetch
+        var downloadName = "document.pdf";
+
+        // ---- Context helpers ----------------------------------------------
+        function getQueryParam(name) {
+            var match = new RegExp("[?&]" + name + "=([^&]*)").exec(window.location.search);
+            return match ? decodeURIComponent(match[1].replace(/\+/g, " ")) : null;
+        }
+
+        function getRecordId() {
+            var id = getQueryParam("id");
+            // UCI passes record ID as a query param when "Pass record object-type code
+            // and unique identifier as parameters" is checked on the web resource.
+            if (!id) {
+                // Try window.parent first, then window.top (some UCI layouts nest deeper)
+                var xrm = (window.parent && window.parent.Xrm) ||
+                           (window.top && window.top !== window.parent && window.top.Xrm);
+                if (xrm) {
+                    try { id = xrm.Page.data.entity.getId(); } catch (e) {}
+                }
+            }
+            if (!id) { return null; }
+            id = id.replace(/[{}]/g, "").toLowerCase();
+            // Reject null GUID (unsaved record)
+            if (id === "00000000-0000-0000-0000-000000000000") { return null; }
+            return id;
+        }
+
+        function getClientUrl() {
+            try {
+                if (window.parent && window.parent.Xrm) {
+                    return window.parent.Xrm.Utility.getGlobalContext().getClientUrl();
+                }
+            } catch (e) {}
+            return window.location.origin;
+        }
+
+        // ---- Status -------------------------------------------------------
+        function setStatus(text, isError, busy) {
+            els.status.classList.toggle("error", !!isError);
+            els.status.innerHTML = "";
+            if (busy) {
+                var s = document.createElement("span");
+                s.className = "spinner";
+                els.status.appendChild(s);
+            }
+            els.status.appendChild(document.createTextNode(text || ""));
+        }
+
+        // ---- File name (cheap call, runs on load) -------------------------
+        function loadFileName() {
+            var recordId = getRecordId();
+            if (!recordId) { return; }
+            var url = getClientUrl() + "/api/data/" + API_VERSION + "/" +
+                ENTITY_SET + "(" + recordId + ")?$select=" + FILE_NAME_COLUMN;
+            fetch(url, {
+                method: "GET",
+                credentials: "include",
+                headers: { "Accept": "application/json", "OData-MaxVersion": "4.0", "OData-Version": "4.0" }
+            })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (data) {
+                if (data && data[FILE_NAME_COLUMN]) {
+                    var name = data[FILE_NAME_COLUMN];
+                    els.fileName.textContent = name;
+                    if (!/\.pdf$/i.test(name)) { name += ".pdf"; }
+                    downloadName = name;
+                }
+            })
+            .catch(function () {});
+        }
+
+        // ---- Lazy file download (only when an action is triggered) --------
+        function ensureBlob() {
+            if (fetchPromise) { return fetchPromise; }
+
+            var recordId = getRecordId();
+            if (!recordId) {
+                return Promise.reject(new Error("No record context. Save the record first."));
+            }
+
+            var fileUrl = getClientUrl() + "/api/data/" + API_VERSION + "/" +
+                ENTITY_SET + "(" + recordId + ")/" + FILE_COLUMN + "/$value";
+
+            setStatus("Loading document…", false, true);
+            disableActions(true);
+
+            fetchPromise = fetch(fileUrl, {
+                method: "GET",
+                credentials: "include",
+                headers: { "Accept": "application/octet-stream", "OData-MaxVersion": "4.0", "OData-Version": "4.0" }
+            })
+            .then(function (response) {
+                if (response.status === 404) { throw new Error("No file is attached to this record."); }
+                if (!response.ok) { throw new Error("Failed to load file (HTTP " + response.status + ")."); }
+                return response.blob();
+            })
+            .then(function (blob) {
+                if (!blob || blob.size === 0) { throw new Error("The attachment is empty."); }
+                var pdfBlob = new Blob([blob], { type: "application/pdf" });
+                objectUrl = URL.createObjectURL(pdfBlob);
+                setStatus("", false, false);
+                disableActions(false);
+                return objectUrl;
+            })
+            .catch(function (err) {
+                fetchPromise = null; // allow retry
+                disableActions(false);
+                setStatus(err.message || "Unable to load the document.", true, false);
+                throw err;
+            });
+
+            return fetchPromise;
+        }
+
+        function disableActions(disabled) {
+            els.openWindowBtn.disabled = disabled;
+            els.openTabBtn.disabled = disabled;
+            els.downloadBtn.disabled = disabled;
+            els.previewBtn.disabled = disabled;
+        }
+
+        // ---- Actions ------------------------------------------------------
+        els.openWindowBtn.addEventListener("click", function () {
+            var w = window.open("", "_blank",
+                "popup=yes,width=900,height=1000,scrollbars=yes,resizable=yes");
+            if (!w) {
+                setStatus("Pop-up blocked. Allow pop-ups for this site, or use "New tab".", true, false);
+                return;
+            }
+            w.document.write("<title>Loading PDF…</title><body style='font-family:Segoe UI;padding:24px;color:#605e5c'>Loading document…</body>");
+            ensureBlob().then(function (url) {
+                w.location.href = url;
+            }).catch(function () { try { w.close(); } catch (e) {} });
+        });
+
+        els.openTabBtn.addEventListener("click", function () {
+            var w = window.open("", "_blank");
+            if (!w) {
+                setStatus("Pop-up blocked. Allow pop-ups for this site.", true, false);
+                return;
+            }
+            ensureBlob().then(function (url) {
+                w.location.href = url;
+            }).catch(function () { try { w.close(); } catch (e) {} });
+        });
+
+        els.downloadBtn.addEventListener("click", function () {
+            ensureBlob().then(function (url) {
+                var a = document.createElement("a");
+                a.href = url;
+                a.download = downloadName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            }).catch(function () {});
+        });
+
+        els.previewBtn.addEventListener("click", function () {
+            var collapsed = els.preview.classList.contains("collapsed");
+            if (collapsed) {
+                ensureBlob().then(function (url) {
+                    els.frame.data = url;
+                    els.preview.classList.remove("collapsed");
+                    els.previewBtn.textContent = "Hide preview";
+                }).catch(function () {});
+            } else {
+                els.preview.classList.add("collapsed");
+                els.previewBtn.textContent = "Preview";
+            }
+        });
+
+        window.addEventListener("beforeunload", function () {
+            if (objectUrl) { URL.revokeObjectURL(objectUrl); }
+        });
+
+        // ---- Init ---------------------------------------------------------
+        (function init() {
+            if (!getRecordId()) {
+                disableActions(true);
+                els.subText.textContent = "Save the record to view the attachment.";
+                els.preview.classList.add("collapsed");
+                els.previewBtn.textContent = "Preview";
+                return;
+            }
+            loadFileName();
+            // Auto-open preview on load
+            ensureBlob().then(function (url) {
+                els.frame.data = url;
+                // Fallback link inside <object> for browsers that can't render inline
+                var fallback = document.getElementById("pdfFallbackLink");
+                if (fallback) { fallback.href = url; }
+                // preview is visible by default (no collapsed class in markup)
+            }).catch(function () {
+                // Error shown in #status; preview stays visible so the message is clear
+            });
+        })();
+    </script>
+</body>
+</html>

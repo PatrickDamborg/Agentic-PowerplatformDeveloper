@@ -1,0 +1,21 @@
+[
+  { "SchemaName": "pda_OrderDate",    "Type": "DateTime", "DisplayName": "Order Date",    "Format": "DateAndTime" },
+  { "SchemaName": "pda_Status",       "Type": "Choice",   "DisplayName": "Status",
+    "Options": [
+      { "Label": "Submitted",          "Value": 100000000 },
+      { "Label": "Baking",             "Value": 100000001 },
+      { "Label": "Ready for Pickup",   "Value": 100000002 },
+      { "Label": "Completed",          "Value": 100000003 },
+      { "Label": "Cancelled",          "Value": 100000004 }
+    ]
+  },
+  { "SchemaName": "pda_Fulfilment",   "Type": "Choice",   "DisplayName": "Fulfilment",
+    "Options": [
+      { "Label": "Pickup",   "Value": 100000000 },
+      { "Label": "Delivery", "Value": 100000001 }
+    ]
+  },
+  { "SchemaName": "pda_PickupDate",   "Type": "DateTime", "DisplayName": "Pickup / Delivery Date", "Format": "DateOnly" },
+  { "SchemaName": "pda_Total",        "Type": "Money",    "DisplayName": "Total",         "MinValue": 0, "MaxValue": 100000, "Precision": 2 },
+  { "SchemaName": "pda_Notes",        "Type": "Memo",     "DisplayName": "Notes",         "MaxLength": 2000 }
+]

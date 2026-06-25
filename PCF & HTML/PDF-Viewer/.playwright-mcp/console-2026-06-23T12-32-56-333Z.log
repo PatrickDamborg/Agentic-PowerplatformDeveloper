@@ -1,0 +1,42 @@
+[    6384ms] [LOG] ECS - Delaying config fetch until the app is active (or background fetch is allowed) @ https://content.powerapps.com/resource/makerx/static/js/module/21.e87124ac.chunk.js:0
+[    6480ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://042542f91c0b4eb7af342a00941cf4.7b.tenant.api.powerplatform.com/powerapps/userSettings/preferredSolutionCard_prod?api-version=1:0
+[    6688ms] [WARNING] No previously cached ECS telemetry config exists - fallback to sending event @ https://content.powerapps.com/resource/makerx/static/js/module/21.e87124ac.chunk.js:0
+[    6688ms] [LOG] ECS - Config fetch complete @ https://content.powerapps.com/resource/makerx/static/js/module/21.e87124ac.chunk.js:0
+[    6689ms] [WARNING] No previously cached ECS telemetry config exists - fallback to sending event @ https://content.powerapps.com/resource/makerx/static/js/module/21.e87124ac.chunk.js:0
+[    6689ms] [LOG] ECS - Config fetch complete @ https://content.powerapps.com/resource/makerx/static/js/module/21.e87124ac.chunk.js:0
+[    6690ms] [WARNING] No previously cached ECS telemetry config exists - fallback to sending event @ https://content.powerapps.com/resource/makerx/static/js/module/21.e87124ac.chunk.js:0
+[    6690ms] [LOG] ECS - Config fetch complete @ https://content.powerapps.com/resource/makerx/static/js/module/21.e87124ac.chunk.js:0
+[    7453ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://042542f91c0b4eb7af342a00941cf4.7b.tenant.api.powerplatform.com/powerapps/userSettings/MobileAppsNotification?api-version=1:0
+[    7557ms] [WARNING] No previously cached ECS telemetry config exists - fallback to sending event @ https://content.powerapps.com/resource/makerx/static/js/module/285.05b549cd.chunk.js:1
+[    7557ms] [LOG] ECS - Config fetch complete @ https://content.powerapps.com/resource/makerx/static/js/module/285.05b549cd.chunk.js:1
+[    7791ms] [WARNING] No previously cached ECS telemetry config exists - fallback to sending event @ https://content.powerapps.com/resource/makerx/static/js/module/285.05b549cd.chunk.js:1
+[    7791ms] [LOG] ECS - Config fetch complete @ https://content.powerapps.com/resource/makerx/static/js/module/285.05b549cd.chunk.js:1
+[    7792ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://default-042542f9-1c0b-4eb7-af34-2a00941cf47b.08.common.europe.azure-apihub.net/apim/office365:0
+[    7835ms] [LOG] [floodgate] Floodgate module loaded @ https://res.cdn.office.net/admincenter/admin-main/2026.6.18.6/floodgate.en.bundle.js:266
+[    8289ms] [WARNING] Some icons were re-registered. Applications should only call registerIcons for any given icon once. Redefining what an icon is may have unintended consequences. Duplicates include: 
+brush, translate, openEnrollment, GlobalNavButton, ChevronDown, ChevronUp, Edit, Add, Cancel, More (+ 1794 more) @ https://content.powerapps.com/resource/makerx/static/js/module/main.16504b08.js:1
+[    8466ms] [ERROR] Failed to load resource: net::ERR_CERT_COMMON_NAME_INVALID @ https://config.fp.measure.office.com/conf/v2/o365se/fpconfig.min.json?monitorId=O365se:0
+[    9694ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ https://graph.microsoft.com/v1.0/me/photo/$value:0
+[    9837ms] [WARNING] Some icons were re-registered. Applications should only call registerIcons for any given icon once. Redefining what an icon is may have unintended consequences. Duplicates include: 
+GlobalNavButton, ChevronDown, ChevronUp, Edit, Add, Cancel, More, Settings, Mail, Filter (+ 1791 more) @ https://res.cdn.office.net/admincenter/admin-main/2026.6.18.6/floodgate.en.bundle.js:75
+[   11939ms] [WARNING] Some icons were re-registered. Applications should only call registerIcons for any given icon once. Redefining what an icon is may have unintended consequences. Duplicates include: 
+PortalsLogoSolutionMaker, gem-svg, GlobalNavButton, ChevronDown, ChevronUp, Edit, Add, Cancel, More, Settings (+ 5397 more) @ https://content.powerapps.com/resource/makerx/static/js/module/main.16504b08.js:1
+[   13161ms] [LOG] ECS - Config fetch complete @ https://content.powerapps.com/resource/makerx/static/js/module/21.e87124ac.chunk.js:0
+[   13295ms] [LOG] ECS - Config fetch complete @ https://content.powerapps.com/resource/makerx/static/js/module/21.e87124ac.chunk.js:0
+[   15410ms] [ERROR] Unhandled global error: ErrorEvent @ https://content.powerapps.com/resource/makerx/static/js/module/shell.97c96a96.chunk.js:1
+[   34455ms] [WARNING] Some icons were re-registered. Applications should only call registerIcons for any given icon once. Redefining what an icon is may have unintended consequences. Duplicates include: 
+GlobalNavButton, ChevronDown, ChevronUp, Edit, Add, Cancel, More, Settings, Mail, Filter (+ 1791 more) @ https://content.powerapps.com/resource/makerx/static/js/module/main.16504b08.js:1
+[   46041ms] [LOG] ECS - Delaying config fetch until the app is active (or background fetch is allowed) @ https://content.powerapps.com/resource/makerx/static/js/module/21.e87124ac.chunk.js:0
+[   46185ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://042542f91c0b4eb7af342a00941cf4.7b.tenant.api.powerplatform.com/powerapps/userSettings/preferredSolutionCard_prod?api-version=1:0
+[   46350ms] [LOG] ECS - Config fetch complete @ https://content.powerapps.com/resource/makerx/static/js/module/21.e87124ac.chunk.js:0
+[   46351ms] [LOG] ECS - Config fetch complete @ https://content.powerapps.com/resource/makerx/static/js/module/21.e87124ac.chunk.js:0
+[   46354ms] [LOG] ECS - Config fetch complete @ https://content.powerapps.com/resource/makerx/static/js/module/21.e87124ac.chunk.js:0
+[   46761ms] [LOG] [floodgate] Floodgate module loaded @ https://res.cdn.office.net/admincenter/admin-main/2026.6.15.6/floodgate.en.bundle.js:266
+[   46786ms] [ERROR] Failed to load resource: net::ERR_CERT_COMMON_NAME_INVALID @ https://config.fp.measure.office.com/conf/v2/o365se/fpconfig.min.json?monitorId=O365se:0
+[   46969ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ https://graph.microsoft.com/v1.0/users/svccopilot@ngi.dk/photo/$value:0
+[   48118ms] [WARNING] Some icons were re-registered. Applications should only call registerIcons for any given icon once. Redefining what an icon is may have unintended consequences. Duplicates include: 
+brush, translate, openEnrollment, PortalsLogoSolutionMaker, GlobalNavButton, ChevronDown, ChevronUp, Edit, Add, Cancel (+ 7201 more) @ https://content.powerapps.com/resource/makerx/static/js/module/main.16504b08.js:1
+[   48823ms] [WARNING] Some icons were re-registered. Applications should only call registerIcons for any given icon once. Redefining what an icon is may have unintended consequences. Duplicates include: 
+GlobalNavButton, ChevronDown, ChevronUp, Edit, Add, Cancel, More, Settings, Mail, Filter (+ 1791 more) @ https://res.cdn.office.net/admincenter/admin-main/2026.6.15.6/floodgate.en.bundle.js:75
+[   50515ms] [WARNING] Some icons were re-registered. Applications should only call registerIcons for any given icon once. Redefining what an icon is may have unintended consequences. Duplicates include: 
+GlobalNavButton, ChevronDown, ChevronUp, Edit, Add, Cancel, More, Settings, Mail, Filter (+ 1791 more) @ https://content.powerapps.com/resource/makerx/static/js/module/main.16504b08.js:1

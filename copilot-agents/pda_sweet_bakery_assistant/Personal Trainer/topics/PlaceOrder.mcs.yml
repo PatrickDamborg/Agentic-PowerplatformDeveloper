@@ -1,0 +1,107 @@
+mcs.metadata:
+  componentName: Place Order
+  description: Guides the customer through placing a bakery order. Collects items, quantities, customer details, and fulfilment preference, then confirms the order summary before submitting via the Create Bakery Order action.
+kind: AdaptiveDialog
+modelDisplayName: Place Order
+modelDescription: Use this topic when the customer wants to place an order for bakery products. Collect the items and quantities, customer name, email, fulfilment preference (Pickup or Delivery), preferred date, and any special notes. Always show a full order summary and ask for explicit customer confirmation before calling the Create Bakery Order tool. After the customer confirms, call Create Bakery Order and then display the returned order reference and total.
+inputs:
+  - kind: AutomaticTaskInput
+    propertyName: initialOrderRequest
+    description: What the customer initially said they want to order, if mentioned. May be empty if they just said "place an order".
+    entity: StringPrebuiltEntity
+    shouldPromptUser: false
+
+inputType:
+  properties:
+    initialOrderRequest:
+      displayName: Initial Order Request
+      description: What the customer said they want to order.
+      type: String
+
+beginDialog:
+  kind: OnRecognizedIntent
+  id: main
+  intent:
+    displayName: Place Order
+    includeInOnSelectIntent: true
+    triggerQueries:
+      - I'd like to order
+      - I want to buy
+      - place an order
+      - I'd like to place an order
+      - can I order
+      - I want to order
+      - let me order
+      - I'd like to purchase
+      - order some bread
+      - order a cake
+    modelDescription: Triggered when the customer wants to place an order for bakery products.
+
+  actions:
+    - kind: SendActivity
+      id: sendMessage_order_intro
+      activity: Wonderful, let's get your order started! Tell me what you'd like — list the items and quantities, for example "2 sourdough loaves and 4 croissants".
+
+    - kind: Question
+      id: question_orderItems
+      variable: init:Topic.OrderItems
+      prompt: What items and quantities would you like to order?
+      entity: StringPrebuiltEntity
+
+    - kind: Question
+      id: question_customerName
+      variable: init:Topic.CustomerName
+      prompt: What's your name for the order?
+      entity: StringPrebuiltEntity
+
+    - kind: Question
+      id: question_customerEmail
+      variable: init:Topic.CustomerEmail
+      prompt: And your email address so we can send you an order confirmation?
+      entity: EMailPrebuiltEntity
+
+    - kind: Question
+      id: question_fulfilment
+      variable: init:Topic.FulfilmentType
+      prompt: Would you prefer Pickup or Delivery?
+      entity: StringPrebuiltEntity
+
+    - kind: Question
+      id: question_date
+      variable: init:Topic.PickupDate
+      prompt: What date would you like for pickup or delivery? (e.g. Monday 2 June 2026)
+      entity: StringPrebuiltEntity
+
+    - kind: Question
+      id: question_notes
+      variable: init:Topic.Notes
+      prompt: Any special requests or notes? (e.g. nut-free, birthday message, decoration) — or just say "none".
+      entity: StringPrebuiltEntity
+
+    - kind: SendActivity
+      id: sendMessage_order_summary
+      activity: "Here's your order summary:\n\n**Items:** {Topic.OrderItems}\n**Name:** {Topic.CustomerName}\n**Email:** {Topic.CustomerEmail}\n**Fulfilment:** {Topic.FulfilmentType}\n**Date:** {Topic.PickupDate}\n**Notes:** {Topic.Notes}\n\nShall I go ahead and submit this order? (yes / no)"
+
+    - kind: Question
+      id: question_confirm
+      variable: init:Topic.Confirmed
+      prompt: Please confirm — shall I submit this order?
+      entity: BooleanPrebuiltEntity
+
+    - kind: ConditionGroup
+      id: conditionGroup_confirm
+      conditions:
+        - id: conditionItem_yes
+          condition: =Topic.Confirmed = true
+          actions:
+            - kind: SendActivity
+              id: sendMessage_submitting
+              activity: Submitting your order now — just a moment!
+
+      elseActions:
+        - kind: SendActivity
+          id: sendMessage_order_cancelled
+          activity: No problem — your order has not been submitted. Feel free to come back whenever you're ready to order, or ask me anything about our menu!
+
+        - kind: CancelAllDialogs
+          id: cancelAllDialogs_order_cancelled

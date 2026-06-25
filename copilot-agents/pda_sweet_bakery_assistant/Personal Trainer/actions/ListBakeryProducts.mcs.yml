@@ -1,0 +1,25 @@
+mcs.metadata:
+  componentName: List Bakery Products
+  description: Retrieves available products from the Hempel Sweet Bakery product catalog in Dataverse.
+kind: TaskDialog
+modelDisplayName: List Bakery Products
+modelDescription: Use this tool to retrieve the list of available products from the bakery catalog. Call this whenever the customer asks about the menu, what products are available, what breads or cakes are on offer, or what ingredients/allergens a product contains. Returns product names, categories, prices, descriptions, and allergen information for all currently available products.
+inputs:
+  - kind: ManualTaskInput
+    propertyName: entityName
+    value: pda_products
+  - kind: ManualTaskInput
+    propertyName: "'$filter'"
+    value: pda_available eq true
+  - kind: ManualTaskInput
+    propertyName: "'$select'"
+    value: pda_name,pda_category,pda_price,pda_description,pda_allergens,pda_available
+outputs:
+  - propertyName: value
+action:
+  kind: InvokeConnectorTaskAction
+  connectionReference: pum_sharedcommondataserviceforapps_1479b
+  connectionProperties:
+    mode: Maker
+  operationId: GetItems
+outputMode: All

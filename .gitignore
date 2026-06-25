@@ -1,7 +1,13 @@
 .env
 .token
 schema_dump.json
+env
 
 # Customer environment credentials and local session state
 customers/**/.env
 customers/**/session.json
+
+# OS / tooling noise
+.DS_Store
+**/.DS_Store
+node_modules/

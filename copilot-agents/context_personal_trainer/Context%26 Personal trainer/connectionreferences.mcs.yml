@@ -1,0 +1,3 @@
+﻿connectionReferences:
+  - connectionReferenceLogicalName: cr8e2_ContextPersonaltrainer.shared_commondataserviceforapps.shared-commondataser-b45e0804-d547-4594-b2a1-72e2b28cb2b5
+    connectorId: /providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps

@@ -1,0 +1,9 @@
+mcs.metadata:
+  componentName: varPreferences
+  description: Used to define the user's exercise preferences
+kind: Variable
+name: varPreferences
+scope: Conversation
+isExternalInitializationAllowed: false
+isOutputToExternalCallers: false
+initializationTimeoutInMilliseconds: 0

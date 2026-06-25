@@ -1,0 +1,3 @@
+connectionReferences:
+  - connectionReferenceLogicalName: pum_sharedcommondataserviceforapps_1479b
+    connectorId: /providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps

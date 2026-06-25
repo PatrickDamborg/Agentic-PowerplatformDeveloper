@@ -1,0 +1,191 @@
+mcs.metadata:
+  componentName: topicTrainingProfile
+kind: AdaptiveDialog
+modelDescription: This topic gathers the information from the user which is used to populate a training profile
+beginDialog:
+  kind: OnRecognizedIntent
+  id: main
+  intent: {}
+  actions:
+    - kind: AdaptiveCardPrompt
+      id: YBWIfN
+      card: |-
+        {
+          "type": "AdaptiveCard",
+          "version": "1.5",
+          "body": [
+            {
+              "type": "TextBlock",
+              "text": "Training Profile",
+              "weight": "Bolder",
+              "size": "Large",
+              "wrap": true
+            },
+            {
+              "type": "TextBlock",
+              "text": "Tell us a bit about yourself so we can personalise your programme.",
+              "wrap": true,
+              "spacing": "Small",
+              "isSubtle": true
+            },
+            {
+              "type": "TextBlock",
+              "text": "Name",
+              "wrap": true,
+              "spacing": "Medium",
+              "weight": "Bolder"
+            },
+            {
+              "type": "Input.Text",
+              "id": "context_name",
+              "placeholder": "Your name"
+            },
+            {
+              "type": "TextBlock",
+              "text": "Gender",
+              "wrap": true,
+              "spacing": "Medium",
+              "weight": "Bolder"
+            },
+            {
+              "type": "Input.ChoiceSet",
+              "id": "context_gender",
+              "placeholder": "Select gender",
+              "choices": [
+                {
+                  "title": "Male",
+                  "value": "100000000"
+                },
+                {
+                  "title": "Female",
+                  "value": "100000001"
+                },
+                {
+                  "title": "Non-binary",
+                  "value": "100000002"
+                },
+                {
+                  "title": "Prefer not to say",
+                  "value": "100000003"
+                }
+              ]
+            },
+            {
+              "type": "TextBlock",
+              "text": "Age",
+              "wrap": true,
+              "spacing": "Medium",
+              "weight": "Bolder"
+            },
+            {
+              "type": "Input.Number",
+              "id": "context_age",
+              "placeholder": "Enter your age",
+              "min": 10,
+              "max": 100
+            },
+            {
+              "type": "ColumnSet",
+              "spacing": "Medium",
+              "columns": [
+                {
+                  "type": "Column",
+                  "width": "stretch",
+                  "items": [
+                    {
+                      "type": "TextBlock",
+                      "text": "Weight (kg)",
+                      "wrap": true,
+                      "weight": "Bolder"
+                    },
+                    {
+                      "type": "Input.Number",
+                      "id": "context_weight",
+                      "placeholder": "e.g. 75.5",
+                      "min": 20,
+                      "max": 300
+                    }
+                  ]
+                },
+                {
+                  "type": "Column",
+                  "width": "stretch",
+                  "items": [
+                    {
+                      "type": "TextBlock",
+                      "text": "Height (cm)",
+                      "wrap": true,
+                      "weight": "Bolder"
+                    },
+                    {
+                      "type": "Input.Number",
+                      "id": "context_height",
+                      "placeholder": "e.g. 178.0",
+                      "min": 100,
+                      "max": 250
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "actions": [
+            {
+              "type": "Action.Submit",
+              "title": "Submit",
+              "data": {
+                "actionType": "createTrainingProfile"
+              }
+            }
+          ],
+          "$schema": "https://adaptivecards.io/schemas/adaptive-card.json"
+        }
+      output:
+        binding:
+          actionSubmitId: Topic.actionSubmitId
+          actionType: Topic.actionType
+          context_age: Topic.context_age
+          context_gender: Topic.context_gender
+          context_height: Topic.context_height
+          context_name: Topic.context_name
+          context_weight: Topic.context_weight
+
+      outputType:
+        properties:
+          actionSubmitId: String
+          actionType: String
+          context_age: Number
+          context_gender: String
+          context_height: Number
+          context_name: String
+          context_weight: Number
+
+    - kind: Question
+      id: question_FQGkap
+      interruptionPolicy:
+        allowInterruption: true
+
+      variable: init:Global.varGoals
+      prompt: "Thanks. Now I need to know if you have any specific goals you want me to focus on? "
+      entity: StringPrebuiltEntity
+
+    - kind: Question
+      id: question_6EXyIp
+      interruptionPolicy:
+        allowInterruption: true
+
+      variable: init:Global.varInjuries
+      prompt: "Perfect. That sounds like a good and realistic goal. Do you have any injuries I need to know of? "
+      entity: StringPrebuiltEntity
+
+    - kind: Question
+      id: question_FeAuSs
+      interruptionPolicy:
+        allowInterruption: true
+
+      variable: init:Global.varPreferences
+      prompt: "Lastly. Any exercise preferences? I.e you prefer dumbbell bench press over barbell bench press. "
+      entity: StringPrebuiltEntity
+
+inputType: {}
+outputType: {}

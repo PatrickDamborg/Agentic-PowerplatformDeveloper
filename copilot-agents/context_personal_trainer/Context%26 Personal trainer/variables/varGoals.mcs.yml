@@ -1,0 +1,9 @@
+mcs.metadata:
+  componentName: varGoals
+  description: Variable to store the user's goals with their training
+kind: Variable
+name: varGoals
+scope: Conversation
+isExternalInitializationAllowed: false
+isOutputToExternalCallers: false
+initializationTimeoutInMilliseconds: 0

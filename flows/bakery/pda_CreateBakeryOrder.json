@@ -1,0 +1,462 @@
+{
+  "schemaVersion": "1.0.0.0",
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "pum_sharedcommondataserviceforapps_1479b"
+        },
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        }
+      },
+      "shared_logicflows": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "pum_sharedlogicflows"
+        },
+        "api": {
+          "name": "shared_logicflows"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        }
+      },
+      "triggers": {
+        "When_Copilot_Studio_calls_a_flow": {
+          "type": "OpenApiConnection",
+          "kind": "PowerVirtualAgents",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_logicflows",
+              "operationId": "Run_a_flow_from_Microsoft_Copilot_Studio",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_logicflows"
+            },
+            "parameters": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "customerName",
+                  "customerEmail",
+                  "fulfilmentType",
+                  "pickupDate",
+                  "notes",
+                  "orderLinesJson"
+                ],
+                "properties": {
+                  "customerName": {
+                    "title": "Customer Name",
+                    "type": "string",
+                    "description": "Full name of the customer placing the order.",
+                    "x-ms-agent-required": true
+                  },
+                  "customerEmail": {
+                    "title": "Customer Email",
+                    "type": "string",
+                    "description": "Email address of the customer.",
+                    "x-ms-agent-required": true
+                  },
+                  "fulfilmentType": {
+                    "title": "Fulfilment Type",
+                    "type": "string",
+                    "description": "Pickup or Delivery.",
+                    "x-ms-agent-required": true
+                  },
+                  "pickupDate": {
+                    "title": "Pickup Date",
+                    "type": "string",
+                    "description": "ISO date string for pickup/delivery, e.g. 2026-06-02.",
+                    "x-ms-agent-required": true
+                  },
+                  "notes": {
+                    "title": "Notes",
+                    "type": "string",
+                    "description": "Any additional order notes.",
+                    "x-ms-agent-required": false
+                  },
+                  "orderLinesJson": {
+                    "title": "Order Lines JSON",
+                    "type": "string",
+                    "description": "JSON array of order lines, e.g. [{\"productName\":\"Sourdough Loaf\",\"quantity\":2}].",
+                    "x-ms-agent-required": true
+                  }
+                }
+              }
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        }
+      },
+      "actions": {
+        "Try_Scope": {
+          "type": "Scope",
+          "runAfter": {},
+          "actions": {
+            "Parse_Order_Lines": {
+              "type": "Compose",
+              "runAfter": {},
+              "inputs": "@json(triggerBody()?['orderLinesJson'])"
+            },
+            "List_Contacts_By_Email": {
+              "type": "OpenApiConnection",
+              "runAfter": {
+                "Parse_Order_Lines": ["Succeeded"]
+              },
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "contacts",
+                  "$filter": "emailaddress1 eq '@{triggerBody()?['customerEmail']}'",
+                  "$select": "contactid,firstname,lastname",
+                  "$top": 1
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Check_Contact_Exists": {
+              "type": "If",
+              "runAfter": {
+                "List_Contacts_By_Email": ["Succeeded"]
+              },
+              "expression": {
+                "greater": [
+                  "@length(body('List_Contacts_By_Email')?['value'])",
+                  0
+                ]
+              },
+              "actions": {
+                "Compose_Existing_Contact_Id": {
+                  "type": "Compose",
+                  "runAfter": {},
+                  "inputs": "@first(body('List_Contacts_By_Email')?['value'])?['contactid']"
+                }
+              },
+              "else": {
+                "actions": {
+                  "Compute_Name_Parts": {
+                    "type": "Compose",
+                    "runAfter": {},
+                    "inputs": {
+                      "firstName": "@if(contains(triggerBody()?['customerName'], ' '), substring(triggerBody()?['customerName'], 0, indexOf(triggerBody()?['customerName'], ' ')), triggerBody()?['customerName'])",
+                      "lastName": "@if(contains(triggerBody()?['customerName'], ' '), substring(triggerBody()?['customerName'], add(indexOf(triggerBody()?['customerName'], ' '), 1)), '')"
+                    }
+                  },
+                  "Create_Contact": {
+                    "type": "OpenApiConnection",
+                    "runAfter": {
+                      "Compute_Name_Parts": ["Succeeded"]
+                    },
+                    "inputs": {
+                      "host": {
+                        "connectionName": "shared_commondataserviceforapps",
+                        "operationId": "CreateRecord",
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                      },
+                      "parameters": {
+                        "entityName": "contacts",
+                        "item/firstname": "@outputs('Compute_Name_Parts')?['firstName']",
+                        "item/lastname": "@outputs('Compute_Name_Parts')?['lastName']",
+                        "item/emailaddress1": "@triggerBody()?['customerEmail']"
+                      },
+                      "authentication": "@parameters('$authentication')"
+                    }
+                  },
+                  "Compose_New_Contact_Id": {
+                    "type": "Compose",
+                    "runAfter": {
+                      "Create_Contact": ["Succeeded"]
+                    },
+                    "inputs": "@body('Create_Contact')?['contactid']"
+                  }
+                }
+              }
+            },
+            "Compose_Contact_Id": {
+              "type": "Compose",
+              "runAfter": {
+                "Check_Contact_Exists": ["Succeeded"]
+              },
+              "inputs": "@if(greater(length(body('List_Contacts_By_Email')?['value']), 0), outputs('Compose_Existing_Contact_Id'), outputs('Compose_New_Contact_Id'))"
+            },
+            "Compose_Fulfilment_Code": {
+              "type": "Compose",
+              "runAfter": {
+                "Compose_Contact_Id": ["Succeeded"]
+              },
+              "inputs": "@if(equals(triggerBody()?['fulfilmentType'], 'Delivery'), 100000001, 100000000)"
+            },
+            "Create_Order": {
+              "type": "OpenApiConnection",
+              "runAfter": {
+                "Compose_Fulfilment_Code": ["Succeeded"]
+              },
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "CreateRecord",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "pda_orders",
+                  "item/pda_name": "PENDING",
+                  "item/pda_orderdate": "@utcNow()",
+                  "item/pda_status": 100000000,
+                  "item/pda_fulfilment": "@outputs('Compose_Fulfilment_Code')",
+                  "item/pda_pickupdate": "@triggerBody()?['pickupDate']",
+                  "item/pda_notes": "@triggerBody()?['notes']",
+                  "item/pda_customerid@odata.bind": "@concat('contacts(', outputs('Compose_Contact_Id'), ')')"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Apply_to_Each_Order_Line": {
+              "type": "Foreach",
+              "runAfter": {
+                "Create_Order": ["Succeeded"]
+              },
+              "foreach": "@outputs('Parse_Order_Lines')",
+              "actions": {
+                "List_Product_By_Name": {
+                  "type": "OpenApiConnection",
+                  "runAfter": {},
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_commondataserviceforapps",
+                      "operationId": "ListRecords",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                    },
+                    "parameters": {
+                      "entityName": "pda_products",
+                      "$filter": "pda_name eq '@{items('Apply_to_Each_Order_Line')?['productName']}'",
+                      "$select": "pda_productid,pda_name,pda_price",
+                      "$top": 1
+                    },
+                    "authentication": "@parameters('$authentication')"
+                  }
+                },
+                "Compose_Product": {
+                  "type": "Compose",
+                  "runAfter": {
+                    "List_Product_By_Name": ["Succeeded"]
+                  },
+                  "inputs": "@first(body('List_Product_By_Name')?['value'])"
+                },
+                "Compute_Line_Total": {
+                  "type": "Compose",
+                  "runAfter": {
+                    "Compose_Product": ["Succeeded"]
+                  },
+                  "inputs": "@mul(float(outputs('Compose_Product')?['pda_price']), float(items('Apply_to_Each_Order_Line')?['quantity']))"
+                },
+                "Create_Order_Line": {
+                  "type": "OpenApiConnection",
+                  "runAfter": {
+                    "Compute_Line_Total": ["Succeeded"]
+                  },
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_commondataserviceforapps",
+                      "operationId": "CreateRecord",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                    },
+                    "parameters": {
+                      "entityName": "pda_orderlines",
+                      "item/pda_name": "@concat(string(items('Apply_to_Each_Order_Line')?['quantity']), 'x ', items('Apply_to_Each_Order_Line')?['productName'])",
+                      "item/pda_quantity": "@items('Apply_to_Each_Order_Line')?['quantity']",
+                      "item/pda_unitprice": "@outputs('Compose_Product')?['pda_price']",
+                      "item/pda_linetotal": "@outputs('Compute_Line_Total')",
+                      "item/pda_orderid@odata.bind": "@concat('pda_orders(', body('Create_Order')?['pda_orderid'], ')')",
+                      "item/pda_productid@odata.bind": "@concat('pda_products(', outputs('Compose_Product')?['pda_productid'], ')')"
+                    },
+                    "authentication": "@parameters('$authentication')"
+                  }
+                }
+              }
+            },
+            "List_Order_Lines_For_Total": {
+              "type": "OpenApiConnection",
+              "runAfter": {
+                "Apply_to_Each_Order_Line": ["Succeeded"]
+              },
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "pda_orderlines",
+                  "$filter": "_pda_orderid_value eq '@{body('Create_Order')?['pda_orderid']}'",
+                  "$select": "pda_linetotal"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Compute_Grand_Total": {
+              "type": "Compose",
+              "runAfter": {
+                "List_Order_Lines_For_Total": ["Succeeded"]
+              },
+              "inputs": "@reduce(body('List_Order_Lines_For_Total')?['value'], 0, add(item()['pda_linetotal'], current()))"
+            },
+            "List_Orders_For_Count": {
+              "type": "OpenApiConnection",
+              "runAfter": {
+                "Compute_Grand_Total": ["Succeeded"]
+              },
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "pda_orders",
+                  "$select": "pda_orderid",
+                  "$filter": "pda_status ne 100000004"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Compose_Order_Count": {
+              "type": "Compose",
+              "runAfter": {
+                "List_Orders_For_Count": ["Succeeded"]
+              },
+              "inputs": "@length(body('List_Orders_For_Count')?['value'])"
+            },
+            "Compose_Order_Reference": {
+              "type": "Compose",
+              "runAfter": {
+                "Compose_Order_Count": ["Succeeded"]
+              },
+              "inputs": "@concat('ORD-', padLeft(string(outputs('Compose_Order_Count')), 4, '0'))"
+            },
+            "Update_Order": {
+              "type": "OpenApiConnection",
+              "runAfter": {
+                "Compose_Order_Reference": ["Succeeded"]
+              },
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "UpdateRecord",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "pda_orders",
+                  "recordId": "@body('Create_Order')?['pda_orderid']",
+                  "item/pda_name": "@outputs('Compose_Order_Reference')",
+                  "item/pda_total": "@outputs('Compute_Grand_Total')"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Respond_to_Copilot": {
+              "type": "OpenApiConnectionWebhookResponse",
+              "runAfter": {
+                "Update_Order": ["Succeeded"]
+              },
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_logicflows",
+                  "operationId": "Response",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_logicflows"
+                },
+                "parameters": {
+                  "response/value": {
+                    "orderReference": "@outputs('Compose_Order_Reference')",
+                    "orderTotal": "@string(formatNumber(float(outputs('Compute_Grand_Total')), 'N2'))"
+                  },
+                  "response/schema": {
+                    "type": "object",
+                    "properties": {
+                      "orderReference": {
+                        "type": "string",
+                        "description": "The generated order reference number, e.g. ORD-0042."
+                      },
+                      "orderTotal": {
+                        "type": "string",
+                        "description": "Grand total of the order formatted to 2 decimal places."
+                      }
+                    }
+                  }
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            }
+          }
+        },
+        "Catch_Scope": {
+          "type": "Scope",
+          "runAfter": {
+            "Try_Scope": ["Failed", "TimedOut"]
+          },
+          "actions": {
+            "Compose_Error_Details": {
+              "type": "Compose",
+              "runAfter": {},
+              "inputs": {
+                "flowName": "@workflow()?['tags']['flowDisplayName']",
+                "runId": "@workflow()?['run']['name']",
+                "errorResult": "@result('Try_Scope')",
+                "timestamp": "@utcNow()"
+              }
+            },
+            "Respond_to_Copilot_With_Error": {
+              "type": "OpenApiConnectionWebhookResponse",
+              "runAfter": {
+                "Compose_Error_Details": ["Succeeded"]
+              },
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_logicflows",
+                  "operationId": "Response",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_logicflows"
+                },
+                "parameters": {
+                  "response/value": {
+                    "orderReference": "ERROR",
+                    "orderTotal": "0.00"
+                  },
+                  "response/schema": {
+                    "type": "object",
+                    "properties": {
+                      "orderReference": {
+                        "type": "string",
+                        "description": "ERROR if the flow failed."
+                      },
+                      "orderTotal": {
+                        "type": "string",
+                        "description": "0.00 if the flow failed."
+                      }
+                    }
+                  }
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            }
+          }
+        }
+      }
+    },
+    "templateName": ""
+  },
+  "_comment": "Bakery order creation flow triggered by Copilot Studio. Finds or creates a contact by email, creates a pda_order, loops over orderLinesJson to create pda_orderline records, computes grand total, generates ORD-XXXX reference, patches the order, and returns orderReference + orderTotal."
+}

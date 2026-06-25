@@ -51,44 +51,53 @@ Wait for the user's selection before continuing.
 
 ## Step 3 — Authenticate
 
-Run `connect.ps1` with the appropriate env file:
+**Check token cache first.** If `.token` exists and is less than 55 minutes old, skip re-authentication entirely — reuse the cached token. Token lifetime is 1 hour; 55 min gives a safe buffer.
 
 ```powershell
-# Dev
-pwsh -File connect.ps1
+$tokenFile = ".token"   # or "customers/<name>/.token" for customer envs
+$tokenAge  = if (Test-Path $tokenFile) { (Get-Date) - (Get-Item $tokenFile).LastWriteTime } else { $null }
+$tokenFresh = $tokenAge -and $tokenAge.TotalMinutes -lt 55
+```
 
-# Customer
-pwsh -File connect.ps1 -EnvPath "customers/<name>/.env"
+- **Token is fresh** → skip `connect.ps1`, read the existing token from `.token`.
+- **Token is missing or stale** → run `connect.ps1` (or the customer variant) to acquire a new one.
+
+```powershell
+# Only when token is stale/missing:
+pwsh -File connect.ps1                               # dev
+pwsh -File connect.ps1 -EnvPath "customers/<name>/.env"  # customer
 ```
 
 If authentication fails, surface the full error and stop. Do not continue to Step 4.
 
 ---
 
-## Step 4 — Select Solution
+## Step 4 — Select Solution (with publisher included)
 
-Query available unmanaged solutions:
+Fetch solutions **and** their publisher in a single query using `$expand`:
 
 ```powershell
-$url = "$baseUrl/solutions?`$filter=ismanaged eq false and uniquename ne 'Default'&`$select=uniquename,friendlyname,version&`$orderby=friendlyname"
+$url = "$baseUrl/solutions?`$filter=ismanaged eq false and uniquename ne 'Default'" +
+       "&`$select=uniquename,friendlyname,version" +
+       "&`$expand=publisherid(`$select=customizationprefix,friendlyname)" +
+       "&`$orderby=friendlyname"
 ```
 
 Present the list and ask: _"Which solution should I target for this session?"_
 
-Wait for the user's choice.
+Wait for the user's choice. The publisher prefix is already in the response — no further API call needed.
 
 ---
 
 ## Step 5 — Derive Publisher Prefix
 
-Query the selected solution's publisher:
+Read the prefix directly from the Step 4 response for the chosen solution:
 
 ```powershell
-$url = "$baseUrl/solutions?`$filter=uniquename eq '<chosen>'&`$expand=publisherid(`$select=customizationprefix,friendlyname)&`$select=uniquename"
-$prefix = $resp.value[0].publisherid.customizationprefix
+$prefix = $chosenSolution.publisherid.customizationprefix
 ```
 
-This is the publisher prefix for the session. Store it and use it for all SchemaName values (tables, columns, etc.). Do not ask the user for the prefix.
+No additional API call. This is the publisher prefix for the session — use it for all SchemaName values (tables, columns, etc.). Do not ask the user for the prefix.
 
 ---
 

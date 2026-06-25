@@ -1,0 +1,5 @@
+[
+  { "SchemaName": "pda_Quantity",     "Type": "Integer", "DisplayName": "Quantity",   "MinValue": 1, "MaxValue": 999 },
+  { "SchemaName": "pda_UnitPrice",    "Type": "Money",   "DisplayName": "Unit Price", "MinValue": 0, "MaxValue": 10000, "Precision": 2 },
+  { "SchemaName": "pda_LineTotal",    "Type": "Money",   "DisplayName": "Line Total", "MinValue": 0, "MaxValue": 100000, "Precision": 2 }
+]

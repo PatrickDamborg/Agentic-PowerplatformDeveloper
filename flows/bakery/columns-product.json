@@ -1,0 +1,16 @@
+[
+  { "SchemaName": "pda_Description",  "Type": "Memo",    "DisplayName": "Description",  "MaxLength": 2000 },
+  { "SchemaName": "pda_Category",     "Type": "Choice",  "DisplayName": "Category",
+    "Options": [
+      { "Label": "Bread",     "Value": 100000000 },
+      { "Label": "Pastry",    "Value": 100000001 },
+      { "Label": "Cake",      "Value": 100000002 },
+      { "Label": "Cookie",    "Value": 100000003 },
+      { "Label": "Beverage",  "Value": 100000004 }
+    ]
+  },
+  { "SchemaName": "pda_Price",        "Type": "Money",   "DisplayName": "Price",        "MinValue": 0, "MaxValue": 10000, "Precision": 2 },
+  { "SchemaName": "pda_Available",    "Type": "Boolean", "DisplayName": "Available",    "TrueLabel": "Yes", "FalseLabel": "No" },
+  { "SchemaName": "pda_Allergens",    "Type": "String",  "DisplayName": "Allergens",    "MaxLength": 500 },
+  { "SchemaName": "pda_DailyStock",   "Type": "Integer", "DisplayName": "Daily Stock",  "MinValue": 0, "MaxValue": 9999 }
+]

@@ -1,0 +1,9 @@
+mcs.metadata:
+  componentName: varInjuries
+  description: Variable to describe the user's injuries
+kind: Variable
+name: varInjuries
+scope: Conversation
+isExternalInitializationAllowed: false
+isOutputToExternalCallers: false
+initializationTimeoutInMilliseconds: 0

@@ -1,0 +1,82 @@
+{
+  "schemaVersion": "1.0.0.0",
+  "properties": {
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "triggers": {
+        "manual": {
+          "type": "Request",
+          "kind": "Button",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "required": ["flowName", "runId", "errorMessage", "severity", "logId"],
+              "properties": {
+                "flowName":      { "title": "Flow Name",      "type": "string" },
+                "runId":         { "title": "Run ID",         "type": "string" },
+                "runUrl":        { "title": "Run URL",        "type": "string" },
+                "failedStep":    { "title": "Failed Step",    "type": "string" },
+                "errorMessage":  { "title": "Error Message",  "type": "string" },
+                "errorCode":     { "title": "Error Code",     "type": "string" },
+                "severity":      { "title": "Severity",       "type": "string", "description": "Info | Warning | Error | Critical" },
+                "correlationId": { "title": "Correlation ID", "type": "string" },
+                "parentRunId":   { "title": "Parent Run ID",  "type": "string" },
+                "contextJson":   { "title": "Context JSON",   "type": "string" },
+                "logId":         { "title": "Log ID",         "type": "string", "description": "GUID returned by pda_ErrorLog_Write." },
+                "logRecordUrl":  { "title": "Log Record URL", "type": "string", "description": "Deep link to the pda_errorlog record." }
+              }
+            }
+          }
+        }
+      },
+      "actions": {
+        "Compose_Importance": {
+          "type": "Compose",
+          "runAfter": {},
+          "inputs": "@if(or(equals(toLower(triggerBody()?['severity']), 'error'), equals(toLower(triggerBody()?['severity']), 'critical')), 'High', 'Normal')"
+        },
+        "Compose_EmailSubject": {
+          "type": "Compose",
+          "runAfter": {},
+          "inputs": "@{concat('[', triggerBody()?['severity'], '] ', triggerBody()?['flowName'], ' failed', if(empty(triggerBody()?['failedStep']), '', concat(' — ', triggerBody()?['failedStep'])))}"
+        },
+        "Compose_EmailBody": {
+          "type": "Compose",
+          "runAfter": {
+            "Compose_Importance":   ["Succeeded"],
+            "Compose_EmailSubject": ["Succeeded"]
+          },
+          "inputs": "@{concat(\n  '<html><body style=\"font-family:Segoe UI,sans-serif;font-size:14px;color:#333\">',\n  '<h2 style=\"color:', if(or(equals(toLower(triggerBody()?['severity']), 'critical'), equals(toLower(triggerBody()?['severity']), 'error')), '#C0392B', '#E67E22'), '\">&#9888; ', outputs('Compose_EmailSubject'), '</h2>',\n  '<table cellpadding=\"6\" cellspacing=\"0\" style=\"border-collapse:collapse\">',\n  '<tr><td style=\"font-weight:bold;width:140px\">Severity</td><td>', triggerBody()?['severity'], '</td></tr>',\n  '<tr><td style=\"font-weight:bold\">Flow</td><td>', triggerBody()?['flowName'], '</td></tr>',\n  '<tr><td style=\"font-weight:bold\">Failed step</td><td>', if(empty(triggerBody()?['failedStep']), '(not supplied)', triggerBody()?['failedStep']), '</td></tr>',\n  '<tr><td style=\"font-weight:bold\">Error code</td><td>', if(empty(triggerBody()?['errorCode']), '—', triggerBody()?['errorCode']), '</td></tr>',\n  '<tr><td style=\"font-weight:bold\">Run ID</td><td>', triggerBody()?['runId'], '</td></tr>',\n  '<tr><td style=\"font-weight:bold\">Correlation ID</td><td>', if(empty(triggerBody()?['correlationId']), '—', triggerBody()?['correlationId']), '</td></tr>',\n  '</table>',\n  '<h3>Error message</h3>',\n  '<pre style=\"background:#f4f4f4;padding:12px;border-radius:4px;white-space:pre-wrap;word-break:break-all\">', triggerBody()?['errorMessage'], '</pre>',\n  if(empty(triggerBody()?['contextJson']), '', concat('<h3>Context</h3><pre style=\"background:#f4f4f4;padding:12px;border-radius:4px;white-space:pre-wrap;word-break:break-all\">', triggerBody()?['contextJson'], '</pre>')),\n  '<p>',\n  if(empty(triggerBody()?['runUrl']), '', concat('<a href=\"', triggerBody()?['runUrl'], '\">&#128279; View failed run</a> &nbsp;&nbsp;')),\n  if(empty(triggerBody()?['logId']), '', concat('<a href=\"', triggerBody()?['logRecordUrl'], '\">&#128196; Open error log record</a>')),\n  '</p>',\n  '</body></html>'\n)}"
+        },
+        "Send_Email_V2": {
+          "type": "OpenApiConnection",
+          "runAfter": {
+            "Compose_EmailBody": ["Succeeded"]
+          },
+          "inputs": {
+            "host": {
+              "connectionName": "shared_office365",
+              "operationId": "SendEmailV2",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+            },
+            "parameters": {
+              "emailMessage/To":         "pda@contextand.com",
+              "emailMessage/Subject":    "@{outputs('Compose_EmailSubject')}",
+              "emailMessage/Body":       "@{outputs('Compose_EmailBody')}",
+              "emailMessage/Importance": "@{outputs('Compose_Importance')}"
+            }
+          }
+        }
+      }
+    },
+    "connectionReferences": {
+      "shared_office365": {
+        "connectionName": "REPLACE_WITH_OFFICE365_CONNECTION_NAME",
+        "source": "Embedded",
+        "id": "/providers/Microsoft.PowerApps/apis/shared_office365",
+        "tier": "NotSpecified"
+      }
+    }
+  }
+}

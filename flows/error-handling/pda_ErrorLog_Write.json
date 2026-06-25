@@ -1,0 +1,95 @@
+{
+  "schemaVersion": "1.0.0.0",
+  "properties": {
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "triggers": {
+        "manual": {
+          "type": "Request",
+          "kind": "Button",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "required": ["flowName", "runId", "errorMessage", "severity"],
+              "properties": {
+                "flowName":      { "title": "Flow Name",      "type": "string", "description": "Display name of the flow that failed." },
+                "runId":         { "title": "Run ID",         "type": "string", "description": "Power Automate run identifier (workflow()?['run']['name'])." },
+                "runUrl":        { "title": "Run URL",        "type": "string", "description": "Deep link to the failed flow run." },
+                "failedStep":    { "title": "Failed Step",    "type": "string", "description": "Name of the action that threw the error." },
+                "errorMessage":  { "title": "Error Message",  "type": "string", "description": "Full error message text." },
+                "errorCode":     { "title": "Error Code",     "type": "string", "description": "Error code from the failed action." },
+                "severity":      { "title": "Severity",       "type": "string", "description": "Info | Warning | Error | Critical" },
+                "correlationId": { "title": "Correlation ID", "type": "string", "description": "Caller-supplied ID for cross-flow tracing." },
+                "parentRunId":   { "title": "Parent Run ID",  "type": "string", "description": "Run ID of the originating parent flow." },
+                "contextJson":   { "title": "Context JSON",   "type": "string", "description": "Stringified JSON with arbitrary context data." }
+              }
+            }
+          }
+        }
+      },
+      "actions": {
+        "Compose_RecordName": {
+          "type": "Compose",
+          "runAfter": {},
+          "inputs": "@{if(greater(length(concat('[', triggerBody()?['severity'], '] ', triggerBody()?['flowName'], if(empty(triggerBody()?['failedStep']), '', concat(' — ', triggerBody()?['failedStep'])))), 200), substring(concat('[', triggerBody()?['severity'], '] ', triggerBody()?['flowName'], if(empty(triggerBody()?['failedStep']), '', concat(' — ', triggerBody()?['failedStep']))), 0, 200), concat('[', triggerBody()?['severity'], '] ', triggerBody()?['flowName'], if(empty(triggerBody()?['failedStep']), '', concat(' — ', triggerBody()?['failedStep']))))}"
+        },
+        "Compose_SeverityInt": {
+          "type": "Compose",
+          "runAfter": {},
+          "inputs": "@switch(toLower(triggerBody()?['severity']), 'info', 100000000, 'warning', 100000001, 'error', 100000002, 'critical', 100000003, 100000002)"
+        },
+        "Create_ErrorLog_Row": {
+          "type": "OpenApiConnection",
+          "runAfter": {
+            "Compose_RecordName": ["Succeeded"],
+            "Compose_SeverityInt": ["Succeeded"]
+          },
+          "inputs": {
+            "host": {
+              "connectionName": "shared_commondataserviceforapps",
+              "operationId": "CreateRecord",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+            },
+            "parameters": {
+              "entityName": "pda_errorlogs",
+              "item/pda_name":          "@{outputs('Compose_RecordName')}",
+              "item/pda_flowname":      "@triggerBody()?['flowName']",
+              "item/pda_runid":         "@triggerBody()?['runId']",
+              "item/pda_runurl":        "@triggerBody()?['runUrl']",
+              "item/pda_failedstep":    "@triggerBody()?['failedStep']",
+              "item/pda_errormessage":  "@triggerBody()?['errorMessage']",
+              "item/pda_errorcode":     "@triggerBody()?['errorCode']",
+              "item/pda_severity":      "@outputs('Compose_SeverityInt')",
+              "item/pda_contextjson":   "@triggerBody()?['contextJson']",
+              "item/pda_correlationid": "@triggerBody()?['correlationId']",
+              "item/pda_parentrunid":   "@triggerBody()?['parentRunId']"
+            }
+          }
+        },
+        "Respond_to_Flow": {
+          "type": "Response",
+          "kind": "PowerApp",
+          "runAfter": {
+            "Create_ErrorLog_Row": ["Succeeded"]
+          },
+          "inputs": {
+            "statusCode": 200,
+            "body": {
+              "logId":        "@{outputs('Create_ErrorLog_Row')?['body/pda_errorlogid']}",
+              "logRecordUrl": "@{concat('https://pdausa.crm.dynamics.com/main.aspx?etn=pda_errorlog&pagetype=entityrecord&id=', outputs('Create_ErrorLog_Row')?['body/pda_errorlogid'])}"
+            }
+          }
+        }
+      }
+    },
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "connectionName": "REPLACE_WITH_DATAVERSE_CONNECTION_NAME",
+        "source": "Embedded",
+        "id": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+        "tier": "NotSpecified"
+      }
+    }
+  }
+}

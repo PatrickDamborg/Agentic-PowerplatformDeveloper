@@ -1,0 +1,20 @@
+{
+  "name": "xpm-demo-recorder",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Automated demo video recording for xPM / Copilot Studio agents using Playwright + playwright-recast",
+  "type": "module",
+  "scripts": {
+    "login": "playwright open --save-storage=.auth/state.json https://make.powerapps.com",
+    "codegen": "playwright codegen --load-storage=.auth/state.json --target=playwright-test",
+    "record": "playwright test",
+    "render": "node render.mjs",
+    "demo": "npm run record && npm run render"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.60.0"
+  },
+  "dependencies": {
+    "playwright-recast": "^0.19.0"
+  }
+}

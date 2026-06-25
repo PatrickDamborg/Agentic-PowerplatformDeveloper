@@ -1,0 +1,13 @@
+mcs.metadata:
+  componentName: Conversation Start
+  description: This system topic triggers when the agent receives an Activity indicating the beginning of a new conversation. If you do not want the agent to initiate the conversation, disable this topic.
+kind: AdaptiveDialog
+beginDialog:
+  kind: OnConversationStart
+  id: main
+  actions:
+    - kind: SendActivity
+      id: sendMessage_bk7Yw2
+      activity:
+        text:
+          - Welcome to Hempel Sweet Bakery! I'm your personal bakery assistant. I can help you browse our freshly baked menu, answer questions about ingredients and allergens, or place an order for pickup or delivery. What would you like to do today?

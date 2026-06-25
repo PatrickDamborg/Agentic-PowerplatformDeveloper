@@ -1,0 +1,46 @@
+mcs.metadata:
+  componentName: Create Bakery Order
+  description: Submits a new bakery order to the pda_CreateBakeryOrder Power Automate flow and returns the order reference and total.
+kind: TaskDialog
+modelDisplayName: Create Bakery Order
+modelDescription: Use this tool to submit a confirmed bakery order. Only call this after the customer has explicitly confirmed their full order summary. Requires the customer name, email, fulfilment type (Pickup or Delivery), preferred pickup or delivery date, any special notes, and the order lines as a JSON array string with productName and quantity for each item (e.g. [{"productName":"Sourdough Loaf","quantity":2}]). Returns the order reference number and order total to show the customer.
+inputs:
+  - kind: AutomaticTaskInput
+    propertyName: customerName
+    description: The full name of the customer placing the order.
+    entity: StringPrebuiltEntity
+    shouldPromptUser: true
+  - kind: AutomaticTaskInput
+    propertyName: customerEmail
+    description: The email address of the customer for order confirmation.
+    entity: EMailPrebuiltEntity
+    shouldPromptUser: true
+  - kind: AutomaticTaskInput
+    propertyName: fulfilmentType
+    description: Whether the customer wants Pickup or Delivery.
+    entity: StringPrebuiltEntity
+    shouldPromptUser: true
+  - kind: AutomaticTaskInput
+    propertyName: pickupDate
+    description: The requested pickup or delivery date as a text string, e.g. "2026-06-02".
+    entity: StringPrebuiltEntity
+    shouldPromptUser: true
+  - kind: AutomaticTaskInput
+    propertyName: notes
+    description: Any special notes or requests from the customer, such as dietary requirements or decoration instructions. Leave blank if none.
+    entity: StringPrebuiltEntity
+    shouldPromptUser: false
+  - kind: AutomaticTaskInput
+    propertyName: orderLinesJson
+    description: A JSON array string of the order lines, e.g. [{"productName":"Sourdough Loaf","quantity":2},{"productName":"Croissant","quantity":4}]. Build this from the confirmed items and quantities in the conversation.
+    entity: StringPrebuiltEntity
+    shouldPromptUser: false
+outputs:
+  - propertyName: orderReference
+  - propertyName: orderTotal
+# NOTE: Replace the flowId value below with the actual GUID of the pda_CreateBakeryOrder
+# Power Automate flow once it is activated. Find the GUID in the flow URL in Power Automate.
+action:
+  kind: InvokeFlowTaskAction
+  FlowId: 00000000-0000-0000-0000-000000000000
+outputMode: All
