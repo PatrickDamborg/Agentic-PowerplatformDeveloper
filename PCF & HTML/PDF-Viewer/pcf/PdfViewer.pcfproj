@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.PowerApps.MSBuild.Pcf/1.0.6">
+  <PropertyGroup>
+    <Name>PdfViewer</Name>
+    <ProjectGuid>9a7b3c1d-e2f4-4a6b-8c0d-1e2f3a4b5c6d</ProjectGuid>
+    <OutputPath>$(MSBuildThisFileDirectory)out\controls</OutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.PowerApps.MSBuild.Pcf" Version="1.*"/>
+  </ItemGroup>
+</Project>
