@@ -1,5 +1,13 @@
 # Context& Agent Monitor — Dataverse Web Resource
 
+> **Legacy** — superseded by the React + Fluent UI dashboard built from `/src`
+> (see the [root README](../README.md)), which covers autonomous agents with
+> fire/approve capabilities. This web resource remains the only UI for
+> **Copilot Studio (chat) agents** and stays deployed side-by-side;
+> `pda_agentchat.html` is still referenced by name from `Xrm.App.sidePanes`.
+> Note: this document describes a `cxa_` publisher prefix in places, but the
+> deployed code uses `pda_` throughout.
+
 A single-file HTML web resource (`agent-monitor.html`) that gives a live overview of what your **Copilot Studio agents** and **autonomous agents** (Power Automate cloud flows / agent flows) have been triggered and what they're currently working on.
 
 Which agents appear on the dashboard is controlled entirely by a **Dataverse config table** — end users add or deactivate rows, no code changes needed.
