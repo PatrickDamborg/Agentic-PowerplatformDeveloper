@@ -1,92 +1,25 @@
 import { IInputs, IOutputs } from "./generated/ManifestTypes";
 import { PublicClientApplication } from "@azure/msal-browser";
+import { getMsal } from "./auth";
+import {
+    FallbackReason,
+    PreviewError,
+    ResolvedDriveItem,
+    graphGetPreviewUrl,
+    graphResolveDriveItem,
+    previewSrc
+} from "./graph";
+import { FileBrowser } from "./browser";
+import { injectStyles } from "./styles";
 
 type UrlKind = "unsafe" | "canonical" | "unknown";
-
-// Reason codes used to drive graceful-degradation messages.
-type FallbackReason =
-    | "not-configured"
-    | "popup-blocked"
-    | "cancelled"
-    | "consent-required"
-    | "no-access"
-    | "unsupported"
-    | "graph-error"
-    | "auth-error";
-
-// Thrown by the Graph helpers / token acquisition; carries a FallbackReason.
-class PreviewError extends Error {
-    public reason: FallbackReason;
-    constructor(reason: FallbackReason) {
-        super(reason);
-        this.reason = reason;
-    }
-}
-
-// ---- Page-shared MSAL registry -------------------------------------------------
-// One PublicClientApplication per (clientId|authority|redirectUri), shared across
-// all control instances on the page so the token cache and active account are shared.
-interface MsalEntry { app: PublicClientApplication; ready: Promise<void>; }
-const _msalRegistry: Map<string, MsalEntry> = new Map();
-
-function _getMsal(clientId: string, authority: string, redirectUri: string): MsalEntry {
-    const key = clientId + "|" + authority + "|" + redirectUri;
-    let entry = _msalRegistry.get(key);
-    if (!entry) {
-        const config = {
-            auth: { clientId: clientId, authority: authority, redirectUri: redirectUri },
-            cache: { cacheLocation: "localStorage", storeAuthStateInCookie: false }
-        };
-        const app = new PublicClientApplication(config as never);
-        entry = { app: app, ready: app.initialize() };
-        _msalRegistry.set(key, entry);
-    }
-    return entry;
-}
-
-// ---- Microsoft Graph helpers (pure fetch) --------------------------------------
-
-function _encodeShareUrl(url: string): string {
-    // u! + unpadded base64url of the full URL (UTF-8 safe).
-    const b64 = btoa(unescape(encodeURIComponent(url)));
-    return "u!" + b64.replace(/=+$/, "").replace(/\//g, "_").replace(/\+/g, "-");
-}
-
-async function _graphResolveDriveItem(
-    token: string,
-    url: string
-): Promise<{ driveId: string; itemId: string; name: string }> {
-    const enc = _encodeShareUrl(url);
-    const api = "https://graph.microsoft.com/v1.0/shares/" + enc +
-        "/driveItem?$select=id,name,parentReference,file,size,webUrl";
-    const r = await fetch(api, { headers: { Authorization: "Bearer " + token } });
-    if (r.status === 403 || r.status === 404) throw new PreviewError("no-access");
-    if (!r.ok) throw new PreviewError("graph-error");
-    const j = await r.json();
-    const driveId = j && j.parentReference ? j.parentReference.driveId : null;
-    if (!driveId || !j.id) throw new PreviewError("graph-error");
-    return { driveId: driveId, itemId: j.id, name: j.name || "" };
-}
-
-async function _graphGetPreviewUrl(token: string, driveId: string, itemId: string): Promise<string> {
-    const api = "https://graph.microsoft.com/v1.0/drives/" + driveId + "/items/" + itemId + "/preview";
-    const r = await fetch(api, {
-        method: "POST",
-        headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
-        body: "{}"
-    });
-    if (r.status === 403 || r.status === 404) throw new PreviewError("no-access");
-    if (!r.ok) throw new PreviewError("unsupported");
-    const j = await r.json();
-    if (!j || !j.getUrl) throw new PreviewError("unsupported");
-    return j.getUrl as string;
-}
 
 export class PdfViewer implements ComponentFramework.StandardControl<IInputs, IOutputs> {
 
     // Framework references
     private _context!: ComponentFramework.Context<IInputs>;
     private _container!: HTMLDivElement;
+    private _root!: HTMLDivElement;
 
     // DOM elements (class-named to allow multiple instances on one form)
     private _filenameEl!: HTMLDivElement;
@@ -97,7 +30,9 @@ export class PdfViewer implements ComponentFramework.StandardControl<IInputs, IO
     private _btnNewTab!: HTMLButtonElement;
     private _btnDownload!: HTMLButtonElement;
     private _previewWrap!: HTMLDivElement;
+    private _browserWrap!: HTMLDivElement;
     private _iframe: HTMLIFrameElement | null = null;
+    private _browser: FileBrowser | null = null;
 
     // State
     private _url = "";
@@ -105,10 +40,15 @@ export class PdfViewer implements ComponentFramework.StandardControl<IInputs, IO
     private _kind: UrlKind = "unknown";
     private _downloadName = "document.pdf";
     private _previewActive = false;
+    private _browserActive = false;
+    private _resolvedItem: ResolvedDriveItem | null = null;
+    private _resolvedForUrl = "";
+    private _autoExpandTried = false;
 
     // Inline-preview config / MSAL
     private _inlineEnabled = false;
     private _previewHeight = 600;
+    private _browserPageSize = 100;
     private _msal: PublicClientApplication | null = null;
     private _msalReady: Promise<void> | null = null;
     private _msalKey = "";
@@ -150,29 +90,36 @@ export class PdfViewer implements ComponentFramework.StandardControl<IInputs, IO
         this._url  = ((p.boundValue.raw as string) || "").trim();
         this._kind = this._classifySharePointUrl(this._url);
 
-        // Tear down a stale preview if the document changed.
+        // Tear down a stale preview/browser and cached resolution if the bound URL changed.
         if (this._url !== this._lastUrl) {
             this._teardownPreview();
+            this._teardownBrowser();
+            this._resolvedItem = null;
+            this._resolvedForUrl = "";
             this._lastUrl = this._url;
+            this._autoExpandTried = false;
         }
 
         // Inline-preview config
         const clientId = ((p.clientId.raw as string) || "").trim();
         this._inlineEnabled = p.showInlinePreview.raw !== false && clientId !== "";
         this._previewHeight = this._clampHeight(p.previewHeight.raw);
+        this._browserPageSize = this._clampPageSize(p.browserPageSize.raw);
 
         if (this._inlineEnabled) {
             const authority   = this._buildAuthority(((p.tenantId.raw as string) || "").trim());
             const redirectUri = ((p.redirectUri.raw as string) || "").trim() || window.location.origin;
             const key = clientId + "|" + authority + "|" + redirectUri;
             if (!this._msal || this._msalKey !== key) {
-                const entry = _getMsal(clientId, authority, redirectUri);
+                const entry = getMsal(clientId, authority, redirectUri);
                 this._msal = entry.app;
                 this._msalReady = entry.ready;
                 this._msalKey = key;
                 // Update the button label once MSAL is initialized (non-interactive).
                 this._msalReady
-                    .then(() => { if (!this._previewActive) this._btnPreview.textContent = this._previewBtnLabel(); })
+                    .then(() => {
+                        if (!this._previewActive && !this._browserActive) this._btnPreview.textContent = this._previewBtnLabel();
+                    })
                     .catch(() => { /* leave default label */ });
             }
         } else {
@@ -180,36 +127,53 @@ export class PdfViewer implements ComponentFramework.StandardControl<IInputs, IO
             this._msalReady = null;
             this._msalKey = "";
             this._teardownPreview();
+            this._teardownBrowser();
         }
 
         // Preview button shows only when inline is enabled and a URL is present.
         this._btnPreview.style.display = (this._inlineEnabled && this._url) ? "" : "none";
 
+        // Auto-expand: open the preview/browser without a click. Tried once per bound URL;
+        // a silent SSO session expands with no prompt, otherwise the browser blocks the
+        // pop-up (no user gesture) and _onPreviewClick's fallback message asks for one click.
+        if (this._inlineEnabled && this._url && p.autoExpand.raw === true &&
+            !this._autoExpandTried && !this._previewActive && !this._browserActive) {
+            this._autoExpandTried = true;
+            void this._onPreviewClick();
+        }
+
         // Card text / state
         if (!this._url) {
             this._filenameEl.textContent = "No URL configured";
-            this._subtextEl.textContent  = "Paste a SharePoint document URL into the column.";
+            this._subtextEl.textContent  = "Paste a SharePoint document, folder, or library URL into the column.";
             this._disableActions(true);
             this._setStatus("", false);
+            this._applyLayout();
             return;
         }
 
         this._disableActions(false);
-        this._filenameEl.textContent = this._deriveFilename(this._url, this._kind);
-        this._downloadName = this._filenameEl.textContent || "document.pdf";
 
-        if (this._kind === "unsafe") {
-            this._subtextEl.textContent = "Sharing link - prefer the direct file URL";
-            this._setStatus(
-                "Sharing link detected - for reliable per-user permissions, bind the direct file URL (.../sites/.../Shared Documents/file.pdf).",
-                false
-            );
-        } else {
-            this._subtextEl.textContent = this._inlineEnabled
-                ? "Preview or open - your SharePoint permissions apply"
-                : "Opens in SharePoint - your permissions apply";
-            this._setStatus("", false);
+        // While the browser is active it owns the filename/subtext/status; don't stomp on it here.
+        if (!this._browserActive) {
+            this._filenameEl.textContent = this._deriveFilename(this._url, this._kind);
+            this._downloadName = this._filenameEl.textContent || "document.pdf";
+
+            if (this._kind === "unsafe") {
+                this._subtextEl.textContent = "Sharing link - prefer the direct file or folder URL";
+                this._setStatus(
+                    "Sharing link detected - for reliable per-user permissions, bind the direct URL (.../sites/.../Shared Documents/...).",
+                    false
+                );
+            } else {
+                this._subtextEl.textContent = this._inlineEnabled
+                    ? "Preview or open - your SharePoint permissions apply"
+                    : "Opens in SharePoint - your permissions apply";
+                this._setStatus("", false);
+            }
         }
+
+        this._applyLayout();
     }
 
     public getOutputs(): IOutputs {
@@ -218,6 +182,7 @@ export class PdfViewer implements ComponentFramework.StandardControl<IInputs, IO
 
     public destroy(): void {
         this._teardownPreview();
+        this._teardownBrowser();
         // Removing the subtree detaches the click listeners. MSAL is page-shared; leave it.
         if (this._container) this._container.replaceChildren();
     }
@@ -225,8 +190,9 @@ export class PdfViewer implements ComponentFramework.StandardControl<IInputs, IO
     // ---- DOM construction ---------------------------------------------------
 
     private _buildDOM(): void {
-        this._injectStyles();
-        const root = this._el("div", "pv-root");
+        injectStyles();
+        const root = this._el("div", "pv-root") as HTMLDivElement;
+        this._root = root;
 
         // Card
         const card    = this._el("div", "pv-card");
@@ -256,10 +222,11 @@ export class PdfViewer implements ComponentFramework.StandardControl<IInputs, IO
         statusWrap.append(statusText);
         this._statusEl = statusWrap as HTMLDivElement;
 
-        // Inline preview container (hidden until active)
+        // Inline preview / browser containers (hidden until active)
         this._previewWrap = this._el("div", "pv-preview-wrap") as HTMLDivElement;
+        this._browserWrap = this._el("div", "pv-browser-wrap") as HTMLDivElement;
 
-        root.append(card, this._statusEl, this._previewWrap);
+        root.append(card, this._statusEl, this._previewWrap, this._browserWrap);
         this._container.appendChild(root);
 
         // Event handlers
@@ -267,33 +234,6 @@ export class PdfViewer implements ComponentFramework.StandardControl<IInputs, IO
         this._btnOpenWindow.addEventListener("click", () => this._onOpenWindow());
         this._btnNewTab.addEventListener("click",     () => this._onNewTab());
         this._btnDownload.addEventListener("click",   () => this._onDownload());
-    }
-
-    private _injectStyles(): void {
-        const STYLE_ID = "pv-styles-context";
-        if (document.getElementById(STYLE_ID)) return;
-        const s = document.createElement("style");
-        s.id = STYLE_ID;
-        s.textContent = [
-            ".pv-root{font-family:\"Segoe UI\",Tahoma,sans-serif;font-size:14px;color:#323130;display:flex;flex-direction:column;gap:8px;width:100%;box-sizing:border-box}",
-            ".pv-card{display:flex;flex-direction:row;align-items:center;gap:12px;background:#fff;border:1px solid #e1dfdd;border-radius:4px;padding:10px 14px;flex-shrink:0;flex-wrap:wrap}",
-            ".pv-icon{background:#a4262c;color:#fff;font-size:11px;font-weight:700;letter-spacing:.5px;width:36px;height:44px;border-radius:3px;display:flex;align-items:center;justify-content:center;flex-shrink:0}",
-            ".pv-meta{flex:1;min-width:0}",
-            ".pv-filename{font-weight:600;font-size:14px;color:#323130;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}",
-            ".pv-subtext{font-size:12px;color:#605e5c;margin-top:2px}",
-            ".pv-actions{display:flex;flex-direction:row;gap:8px;flex-shrink:0;flex-wrap:wrap}",
-            ".pv-btn{background:#fff;color:#323130;border:1px solid #8a8886;padding:5px 13px;border-radius:3px;font-size:13px;font-family:inherit;cursor:pointer;white-space:nowrap;line-height:1.4}",
-            ".pv-btn:hover:not(:disabled){background:#f3f2f1}",
-            ".pv-btn:disabled{color:#a19f9d;cursor:not-allowed}",
-            ".pv-btn-primary{background:#0078d4;color:#fff;border:none;font-weight:600}",
-            ".pv-btn-primary:hover:not(:disabled){background:#106ebe}",
-            ".pv-btn-primary:disabled{background:#c7e0f4;color:#fff;cursor:not-allowed}",
-            ".pv-status{font-size:13px;color:#605e5c;min-height:18px;padding:0 2px;display:flex;align-items:center;gap:6px}",
-            ".pv-status.is-error{color:#a4262c}",
-            ".pv-preview-wrap{display:none;border:1px solid #e1dfdd;border-radius:4px;overflow:hidden;background:#f5f5f5}",
-            ".pv-iframe{width:100%;border:0;display:block;height:600px}"
-        ].join("\n");
-        document.head.appendChild(s);
     }
 
     private _el(tag: string, cls: string): HTMLElement {
@@ -326,6 +266,11 @@ export class PdfViewer implements ComponentFramework.StandardControl<IInputs, IO
     private _clampHeight(raw: number | null): number {
         const n = (typeof raw === "number" && isFinite(raw)) ? Math.round(raw) : 600;
         return Math.max(200, Math.min(2000, n || 600));
+    }
+
+    private _clampPageSize(raw: number | null): number {
+        const n = (typeof raw === "number" && isFinite(raw)) ? Math.round(raw) : 100;
+        return Math.max(25, Math.min(200, n || 100));
     }
 
     private _buildAuthority(tenant: string): string {
@@ -381,10 +326,19 @@ export class PdfViewer implements ComponentFramework.StandardControl<IInputs, IO
         return "SharePoint document";
     }
 
-    // ---- Inline preview (MSAL + Graph) --------------------------------------
+    // ---- Layout (split-view / narrow drill-in) -------------------------------
+
+    private _applyLayout(): void {
+        const allocated = this._context.mode.allocatedWidth;
+        const width = (typeof allocated === "number" && allocated > 0) ? allocated : this._container.clientWidth;
+        this._root.classList.toggle("pv-narrow", width > 0 && width < 640);
+    }
+
+    // ---- Inline preview / browse (MSAL + Graph) --------------------------------
 
     private async _onPreviewClick(): Promise<void> {
         if (this._previewActive) { this._teardownPreview(); return; }
+        if (this._browserActive) { this._teardownBrowser(); return; }
         if (!this._url) { this._setStatus("No URL is configured.", true); return; }
         if (!this._inlineEnabled || !this._msal) { this._fallbackToOpen("not-configured"); return; }
 
@@ -392,18 +346,32 @@ export class PdfViewer implements ComponentFramework.StandardControl<IInputs, IO
         this._setStatus("Preparing preview...", false);
         try {
             if (this._msalReady) await this._msalReady;
-            const token  = await this._acquireGraphToken();
-            const di     = await _graphResolveDriveItem(token, this._url);
-            if (di.name) { this._filenameEl.textContent = di.name; this._downloadName = di.name; }
-            const getUrl = await _graphGetPreviewUrl(token, di.driveId, di.itemId);
-            this._renderPreview(getUrl);
-            this._setStatus("", false);
+            const token = await this._acquireGraphToken();
+            const di    = await this._resolveDriveItem(token);
+            if (di.isFolder) {
+                this._enterBrowserMode(di);
+                this._setStatus("", false);
+            } else {
+                if (di.name) { this._filenameEl.textContent = di.name; this._downloadName = di.name; }
+                const getUrl = await graphGetPreviewUrl(token, di.driveId, di.itemId);
+                this._renderPreview(getUrl);
+                this._setStatus("", false);
+            }
         } catch (e) {
             const reason: FallbackReason = (e instanceof PreviewError) ? e.reason : "graph-error";
             this._fallbackToOpen(reason);
         } finally {
             this._btnPreview.disabled = false;
         }
+    }
+
+    /** Resolves the bound URL to a drive item, reusing the last resolution for the same URL. */
+    private async _resolveDriveItem(token: string): Promise<ResolvedDriveItem> {
+        if (this._resolvedItem && this._resolvedForUrl === this._url) return this._resolvedItem;
+        const di = await graphResolveDriveItem(token, this._url);
+        this._resolvedItem = di;
+        this._resolvedForUrl = this._url;
+        return di;
     }
 
     private async _acquireGraphToken(): Promise<string> {
@@ -450,8 +418,7 @@ export class PdfViewer implements ComponentFramework.StandardControl<IInputs, IO
     }
 
     private _renderPreview(getUrl: string): void {
-        const sep = getUrl.indexOf("?") === -1 ? "?" : "&";
-        const src = getUrl + sep + "nb=true";
+        const src = previewSrc(getUrl);
         if (!this._iframe) {
             this._iframe = document.createElement("iframe");
             this._iframe.className = "pv-iframe";
@@ -474,11 +441,39 @@ export class PdfViewer implements ComponentFramework.StandardControl<IInputs, IO
         }
         if (this._previewWrap) this._previewWrap.style.display = "none";
         this._previewActive = false;
-        if (this._btnPreview) this._btnPreview.textContent = this._previewBtnLabel();
+        if (this._btnPreview && !this._browserActive) this._btnPreview.textContent = this._previewBtnLabel();
+    }
+
+    private _enterBrowserMode(di: ResolvedDriveItem): void {
+        this._teardownPreview();
+        if (!this._browser) {
+            this._browser = new FileBrowser({
+                host: this._browserWrap,
+                height: this._previewHeight,
+                pageSize: this._browserPageSize,
+                getToken: () => this._acquireGraphToken(),
+                onStatus: (text, isError) => this._setStatus(text, isError)
+            });
+        }
+        this._browser.open(di);
+        this._browserWrap.style.display = "";
+        this._browserActive = true;
+        this._btnPreview.textContent = "Hide browser";
+        this._filenameEl.textContent = di.name || "Document library";
+        this._downloadName = this._filenameEl.textContent || "document.pdf";
+        this._subtextEl.textContent = "Document library - your SharePoint permissions apply";
+    }
+
+    private _teardownBrowser(): void {
+        if (this._browser) this._browser.close();
+        if (this._browserWrap) this._browserWrap.style.display = "none";
+        this._browserActive = false;
+        if (this._btnPreview && !this._previewActive) this._btnPreview.textContent = this._previewBtnLabel();
     }
 
     private _fallbackToOpen(reason: FallbackReason): void {
         this._teardownPreview();
+        this._teardownBrowser();
         let msg: string;
         switch (reason) {
             case "not-configured":

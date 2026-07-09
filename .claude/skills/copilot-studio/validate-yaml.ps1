@@ -126,23 +126,34 @@ function Test-FlowJson {
     if (-not $def.actions.Try_Scope) { Add-Finding $File "missing Try_Scope" }
     if (-not $def.actions.Catch_Scope) { Add-Finding $File "missing Catch_Scope" }
 
-    # Respond to Copilot action should exist and its schema should describe outputs
+    # Respond to Copilot action only applies to flows actually triggered by Copilot Studio
+    # (kind: PowerVirtualAgents). Recurrence/other-triggered flows (e.g. scheduled pre-compute
+    # jobs) have no agent waiting on a response and are exempt from this check.
+    $isAgentTriggered = $trigger.Value.kind -eq 'PowerVirtualAgents'
     $respond = $null
-    if ($def.actions.Try_Scope -and $def.actions.Try_Scope.actions) {
+    if ($isAgentTriggered -and $def.actions.Try_Scope -and $def.actions.Try_Scope.actions) {
         $respond = $def.actions.Try_Scope.actions.PSObject.Properties |
             Where-Object { $_.Value.type -eq 'OpenApiConnectionWebhookResponse' } |
             Select-Object -First 1
     }
-    if (-not $respond) {
+    if (-not $isAgentTriggered) {
+        # Not agent-triggered — no Respond to Copilot action expected.
+    } elseif (-not $respond) {
         Add-Finding $File "no 'Respond to Copilot' action inside Try_Scope"
-    } elseif ($respond.Value.inputs.schema -and $respond.Value.inputs.schema.properties) {
-        foreach ($p in $respond.Value.inputs.schema.properties.PSObject.Properties) {
-            if (-not $p.Value.description -or $p.Value.description.Trim() -eq '') {
-                Add-Finding $File "response output '$($p.Name)' has no description"
-            }
-        }
     } else {
-        Add-Finding $File "Respond to Copilot action has no output schema"
+        # Two valid shapes: older Logic-Apps-webhook style (inputs.schema) and the
+        # current Copilot-Studio "Response" operation style (inputs.parameters.'response/schema').
+        $schema = $respond.Value.inputs.schema
+        if (-not $schema) { $schema = $respond.Value.inputs.parameters.'response/schema' }
+        if ($schema -and $schema.properties) {
+            foreach ($p in $schema.properties.PSObject.Properties) {
+                if (-not $p.Value.description -or $p.Value.description.Trim() -eq '') {
+                    Add-Finding $File "response output '$($p.Name)' has no description"
+                }
+            }
+        } else {
+            Add-Finding $File "Respond to Copilot action has no output schema"
+        }
     }
 }
 

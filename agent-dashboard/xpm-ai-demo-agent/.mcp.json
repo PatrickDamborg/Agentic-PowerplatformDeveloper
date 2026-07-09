@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "dataverse": {
+      "type": "http",
+      "url": "https://pdausa.crm.dynamics.com/api/mcp"
+    }
+  }
+}

@@ -2,9 +2,9 @@
 <manifest>
   <control namespace="ContextAnd"
            constructor="PdfViewer"
-           version="1.3.0"
+           version="1.5.0"
            display-name-key="SharePoint Document Viewer"
-           description-key="Opens or previews a SharePoint document with the signed-in user permissions enforced. Inline preview uses Microsoft Graph and requires an Entra app Client ID; without it the control opens the document in SharePoint."
+           description-key="Opens or previews a SharePoint document, folder, or document library with the signed-in user permissions enforced. Inline preview and folder browsing use Microsoft Graph and require an Entra app Client ID; without it the control opens the document in SharePoint."
            control-type="standard">
 
     <!-- Accepts SingleLine.URL or SingleLine.Text columns -->
@@ -13,10 +13,10 @@
       <type>SingleLine.Text</type>
     </type-group>
 
-    <!-- Primary bound property: the column holding the SharePoint document URL -->
+    <!-- Primary bound property: the column holding the SharePoint document/folder/library URL -->
     <property name="boundValue"
-              display-name-key="SharePoint document URL"
-              description-key="Bind to the text or URL column that stores the SharePoint document link."
+              display-name-key="SharePoint document, folder, or library URL"
+              description-key="Bind to the text or URL column that stores the SharePoint link. A file link previews the document; a folder or library link opens a browsable file list."
               of-type-group="strings"
               usage="bound"
               required="false" />
@@ -24,7 +24,7 @@
     <!-- Inline preview (Microsoft Graph) -->
     <property name="showInlinePreview"
               display-name-key="Show inline preview"
-              description-key="When On, shows a Preview button that renders the document in the form using your own SharePoint permissions via Microsoft Graph. Requires the Client ID below and admin consent. Without a Client ID the control opens or downloads the document in SharePoint."
+              description-key="When On, shows a Preview button that renders the document (or, for a folder/library URL, a browsable file list) in the form using your own SharePoint permissions via Microsoft Graph. Requires the Client ID below and admin consent. Without a Client ID the control opens or downloads the document in SharePoint."
               of-type="TwoOptions"
               usage="input"
               required="false"
@@ -51,13 +51,29 @@
               usage="input"
               required="false" />
 
+    <property name="autoExpand"
+              display-name-key="Expand preview automatically"
+              description-key="When On, the preview (or folder browser) opens automatically without clicking Preview. Uses a silent sign-in if the user already has an active Microsoft 365 session in this browser; otherwise most browsers block the automatic sign-in pop-up, so the user is asked to click Preview once to sign in manually. Requires the Client ID above."
+              of-type="TwoOptions"
+              usage="input"
+              required="false"
+              default-value="0" />
+
     <property name="previewHeight"
-              display-name-key="Inline preview height (px)"
-              description-key="Pixel height of the inline preview. Default 600."
+              display-name-key="Inline preview / browser height (px)"
+              description-key="Pixel height of the inline preview or the folder/library browser. Default 600."
               of-type="Whole.None"
               usage="input"
               required="false"
               default-value="600" />
+
+    <property name="browserPageSize"
+              display-name-key="Folder browser page size"
+              description-key="Number of files/folders to load per page when browsing a document library (25-200). Default 100."
+              of-type="Whole.None"
+              usage="input"
+              required="false"
+              default-value="100" />
 
     <!-- Security: when on, block download of detected SharePoint sharing links -->
     <property name="blockSharePointSharingLinks"

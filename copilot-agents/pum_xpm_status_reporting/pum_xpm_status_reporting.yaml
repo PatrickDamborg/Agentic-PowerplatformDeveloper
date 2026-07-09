@@ -1,218 +1,155 @@
 # Status Reporting Agent — connected agent
-# Drafts status reports across five dimensions: Financials, Scope, Quality, Timeline, Overall.
-# All data retrieved via four Power Automate flows in XPMCopilotSkills solution.
+# Drafts status reports across five dimensions: Timeline, Financials, Scope, Quality, Resources, Overall.
+# REWRITTEN 2026-07-03: previously called 4 sequential Power Automate flows (GetInitiativeDetails,
+# GetProjectPlan, GetRisks, GetStatusReport), each costing a full generative-orchestration turn —
+# this was the root cause of multi-minute status report latency. All 4 of those flows were also
+# never successfully activated in pdausa (stuck in Draft since 2026-04-21). Replaced with a single
+# flow tool, pum_skill_fetch_status_data, that fetches and rates all 5 dimensions server-side in
+# one call. See flows/skills/pum_skill_fetch_status_data.json and the xPM AI project plan.
 
 name: pum_xpm_status_reporting
 displayName: Status Reporting Agent
 description: >-
-  Drafts status reports for xPM Initiatives across five dimensions
+  Drafts and saves a 5-dimension status report (Timeline, Financials, Scope,
+  Quality, Resources) for an xPM Initiative from live data, in one tool call.
 
 instructions: |
   You are a status reporting assistant for Projectum xPM. Your job is to help
-  project managers and PMOs draft a status report for their project.
+  project managers and PMOs draft, review, and save a status report for their
+  project — fast. You receive the Initiative ID from context; if missing, ask
+  "Which project would you like to report on?" and resolve it first.
 
-  ## Step 1 — Gather data
-  You receive the Initiative ID from context. Before drafting, always call all
-  four tools in this order:
-    1. GetInitiativeDetails — project name, sponsor, phase
-    2. GetProjectPlan — task completion, overdue tasks, upcoming milestones
-    3. GetRisks — top open risks by severity
-    4. GetStatusReport — most recent KPI snapshot
+  ## Step 1 — Fetch (one call)
+  Call pum_skill_fetch_status_data once with the resolved initiative id and
+  mode="auto". Do not call any other tool for status-report data — this one
+  call replaces what used to be four sequential lookups. The response
+  includes timeline, financials, scope, quality, resources, overall (each
+  with a rating, ratingInt, and evidence numbers), trend (prior report
+  context), and dataGaps (honesty notes for N/A or absence-based ratings).
+  If the user explicitly asks to refresh, or questions a cached answer's
+  freshness (response field source = "cache"), call again with mode="fresh".
 
-  ## Step 2 — Draft the report
-  Structure the draft across five dimensions. For each, provide:
-    - Status: On Track / At Risk / Off Track
-    - Narrative: 2-4 sentences explaining why
+  ## Step 2 — Review, don't recompute
+  The ratings are already deterministic and computed server-side. Sanity-check
+  each rating against its evidence numbers (e.g. overdueCount = 0 should not
+  be Red) and flag any contradiction rather than silently overriding it.
+  Surface every entry in dataGaps to the user.
 
-  FINANCIALS
-    Use data from GetStatusReport (Cost KPI + financial context).
-    On Track:  Cost KPI is Green
-    At Risk:   Cost KPI is Yellow
-    Off Track: Cost KPI is Red, or no financial data available
+  ## Step 3 — Present the draft
+  For each of the five dimensions plus Overall, show the colour and one line
+  citing the actual evidence numbers from the response — never a vague
+  adjective. Then Highlights (from strong evidence), Lowlights (from
+  dataGaps, topRisks, overdue evidence), and Next period (from
+  timeline.nextMilestoneDate). If trend.hasPriorReport is true, note any
+  dimension that moved since the last report.
 
-  SCOPE
-    Use GetInitiativeDetails (description) + GetProjectPlan (completion rate).
-    On Track:  Tasks progressing as planned, no unplanned scope additions
-    At Risk:   Completion behind plan or pending scope changes
-    Off Track: Major unplanned scope added or key deliverables at risk
+  ## Step 4 — Save on explicit approval
+  Ask: "Shall I save this as a status report record in xPM?" and wait. Only
+  on an unambiguous "yes", create one pum_statusreportings row via the
+  Dataverse MCP create_record tool using the ratingInt values straight from
+  the fetch response (see the status-report-drafter skill for the exact
+  field mapping — pum_statusdate, pum_kpinew*, pum_comment, per-dimension
+  pum_kpinew*comment fields; there are no pum_highlights/pum_lowlights/
+  pum_nextperiodplan fields). Never set pum_kpicurrent* fields.
 
-  QUALITY
-    Use GetStatusReport (Quality KPI) + GetRisks (quality-related risks).
-    Derive status from the existing Quality KPI value as baseline.
-    If no quality data exists, state this explicitly — do not guess.
-
-  TIMELINE
-    Use GetProjectPlan (overdue tasks, milestones, percent complete).
-    On Track:  No overdue tasks, next milestone on schedule
-    At Risk:   1-2 overdue tasks, or next milestone within 5 days of being late
-    Off Track: 3 or more overdue tasks, or a milestone has been missed
-
-  OVERALL
-    Do not call any tool for this dimension. Derive from the other four:
-    On Track:  All four are On Track
-    At Risk:   One or two are At Risk, none are Off Track
-    Off Track: Any dimension is Off Track, or two or more are At Risk
-    Write 2-3 sentences on overall health and the one thing the PM should focus on.
-
-  ## Step 3 — Recommended KPI updates
-  After the five dimensions, add a section "Recommended KPI updates".
-  For each KPI in the StatusReporting record (Cost, Quality, Resources, Schedule,
-  Scope, Summary): suggest Stay / Improve / Worsen with a one-line reason for any
-  change.
-
-  ## Step 4 — Invite refinement
-  Present the draft and invite the user to refine it. Examples:
-    "Make the timeline section shorter"
-    "Change Overall to Off Track — we missed a milestone"
-    "Add a note about the budget conversation"
-    "Rewrite this more formally for the steering committee"
-  Apply changes directly. Do not re-run tools unless the user asks for fresh data.
+  ## Step 5 — Invite refinement
+  After presenting (before or after saving), invite refinement: "Make the
+  timeline section shorter", "Add a note about the budget conversation",
+  "Rewrite this more formally for the steering committee". Apply changes to
+  the presented text directly — do not re-run the fetch tool unless the user
+  asks for fresh data.
 
   ## Rules
     - Be direct. No generic project management advice.
-    - If a tool returns no data, say so in that section — do not fill with assumptions.
-    - Do not save or submit the status report. Tell the user to copy the draft into
-      xPM manually. Saving is not yet supported.
-    - If the Initiative ID is not in context, ask: "Which project would you like to
-      report on?" Then resolve the name via GetInitiativeDetails before proceeding.
+    - Never invent a rating or number not present in the fetch response.
+    - Never call read_query/list_rows against pum_gantttasks, pum_risks,
+      pum_pf_powerfinancialsdatas, pum_proposes, pum_commits, or
+      pum_statusreportings for this task — the fetch tool already did it.
+      Dataverse MCP is only for the approval-gated save in Step 4 and for
+      ad-hoc questions the fetch tool doesn't answer.
 
 tools:
-  - name: pum_GetInitiativeDetails
-    displayName: GetInitiativeDetails
+  - name: pum_skill_fetch_status_data
+    displayName: FetchStatusData
     type: powerAutomateFlow
     description: >-
-      Returns core metadata for an Initiative (name, description, sponsor,
-      category, portfolio, program, status). Call first to anchor the report
-      header and Scope narrative.
+      Fetches and deterministically rates all 5 status-report dimensions
+      (Timeline, Financials, Scope, Quality, Resources) plus Overall for one
+      xPM initiative in a single call. Always use this for status-report
+      data instead of Dataverse read_query/list_rows.
     flow:
-      name: pum_GetInitiativeDetails
+      name: pum_skill_fetch_status_data
       solution: XPMCopilotSkills
     inputSchema:
       type: object
-      required: ["InitiativeId"]
+      required: ["initiativeId"]
       properties:
-        InitiativeId:
+        initiativeId:
           type: string
-          description: GUID of the pum_Initiative record.
+          description: GUID of the pum_Initiative to compute a status report for.
+        mode:
+          type: string
+          description: >-
+            "auto" (default) returns a cached draft if fresh; "fresh" forces
+            a live recompute. Reserved — the current flow version always
+            computes fresh; caching lands in a later phase.
     outputSchema:
       type: object
       properties:
         initiativeId:
           type: string
-          description: GUID of the Initiative.
-        name:
+          description: Echo of the requested initiative GUID.
+        initiativeName:
           type: string
-          description: Display name of the Initiative.
-        description:
+          description: Initiative display name.
+        currentPhase:
           type: string
-          description: Description / scope statement.
-        sponsor:
+          description: Current BPF stage / phase name.
+        computedOn:
           type: string
-          description: Name of the project sponsor.
-        category:
+          description: UTC timestamp this data was computed.
+        source:
           type: string
-          description: Initiative category.
-        portfolio:
-          type: string
-          description: Parent portfolio name.
-        program:
-          type: string
-          description: Parent program name.
-        statusCode:
-          type: string
-          description: Current status code label.
-
-  - name: pum_GetProjectPlan
-    displayName: GetProjectPlan
-    type: powerAutomateFlow
-    description: >-
-      Returns task completion stats, overdue tasks (up to 5), and upcoming
-      milestones (within 30 days, up to 5) for an Initiative. Use for Timeline
-      and Scope dimensions.
-    flow:
-      name: pum_GetProjectPlan
-      solution: XPMCopilotSkills
-    inputSchema:
-      type: object
-      required: ["InitiativeId"]
-      properties:
-        InitiativeId:
-          type: string
-          description: GUID of the pum_Initiative record.
-    outputSchema:
-      type: object
-      properties:
-        totalTasks:
-          type: integer
-          description: Total number of tasks on the Initiative.
-        completedTasks:
-          type: integer
-          description: Number of completed tasks.
-        percentComplete:
-          type: number
-          description: Percentage of tasks completed (0–100).
-        overdueTasks:
-          type: array
-          description: Up to 5 overdue tasks with name and due date.
-        upcomingMilestones:
-          type: array
-          description: Up to 5 milestones due within the next 30 days.
-
-  - name: pum_GetRisks
-    displayName: GetRisks
-    type: powerAutomateFlow
-    description: >-
-      Returns top 5 open risks sorted by probability × impact score. Use for
-      Quality and Overall dimensions.
-    flow:
-      name: pum_GetRisks
-      solution: XPMCopilotSkills
-    inputSchema:
-      type: object
-      required: ["InitiativeId"]
-      properties:
-        InitiativeId:
-          type: string
-          description: GUID of the pum_Initiative record.
-    outputSchema:
-      type: object
-      properties:
-        openRiskCount:
-          type: integer
-          description: Total number of open risks on the Initiative.
-        topRisks:
-          type: array
-          description: >-
-            Up to 5 highest-scored open risks. Each entry includes: name,
-            probability, impact, score, and description.
-
-  - name: pum_GetStatusReport
-    displayName: GetStatusReport
-    type: powerAutomateFlow
-    description: >-
-      Returns the most recent KPI snapshot for an Initiative (Cost, Quality,
-      Resources, Schedule, Scope, Summary — each with current and previous
-      values as Green/Yellow/Red labels).
-    flow:
-      name: pum_GetStatusReport
-      solution: XPMCopilotSkills
-    inputSchema:
-      type: object
-      required: ["InitiativeId"]
-      properties:
-        InitiativeId:
-          type: string
-          description: GUID of the pum_Initiative record.
-    outputSchema:
-      type: object
-      properties:
-        previousReport:
+          description: "'fresh' or 'cache' — which path produced this response."
+        timeline:
           type: object
           description: >-
-            Most recent status report snapshot. Contains date (ISO string) and
-            kpis object with fields: cost, quality, resources, schedule, scope,
-            summary — each with current and previous label values
-            (Green / Yellow / Red).
+            Schedule dimension: rating, ratingInt, incompleteCount,
+            overdueCount, worstOverdueDays, nextMilestoneDate.
+        financials:
+          type: object
+          description: >-
+            Financials dimension: rating, ratingInt, hasData, budget,
+            actuals, forecast, variancePct.
+        scope:
+          type: object
+          description: >-
+            Scope dimension: rating, ratingInt, openRiskCount, highRiskCount,
+            openChangeRequestCount, topRisks array (name, probability,
+            impact, dueDate).
+        quality:
+          type: object
+          description: >-
+            Quality dimension: rating, ratingInt, qualityLessonCount,
+            qualityRiskCount.
+        resources:
+          type: object
+          description: >-
+            Resources dimension: rating, ratingInt, hasData, proposedHours,
+            committedHours, gapHours, gapPct.
+        overall:
+          type: object
+          description: Derived overall rating: rating, ratingInt.
+        trend:
+          type: object
+          description: >-
+            Prior report context: hasPriorReport, priorReportDate,
+            priorSummaryRating, priorComment.
+        dataGaps:
+          type: array
+          description: >-
+            Human-readable notes about any dimension rated N/A or
+            Green-by-absence-of-data. Empty array if none.
 
 knowledge: []
 topics: []

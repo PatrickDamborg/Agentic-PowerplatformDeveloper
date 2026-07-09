@@ -113,15 +113,15 @@ function Import-Solution {
 $solutionDir = "/Users/patrickdamborg/Library/CloudStorage/OneDrive-Context&/xPM Packages APRIL"
 
 $solutions = @(
-    @{ Label = "1. Roadmap";         File = "PowerRoadmap_2.10.15.zip" }
-    @{ Label = "2. Gantt";           File = "PumPowerGanttSolution_4.3.0.zip" }
-    @{ Label = "3. Matrix";          File = "PowerMatrix_2.2.4.zip" }
-    @{ Label = "4. UX";              File = "PowerUX_1.6.3.zip" }
-    @{ Label = "5. Financials";      File = "PowerFinancialsSolution_3.17.0.zip" }
-    @{ Label = "6. Board";           File = "PowerBoard_2.11.0.zip" }
-    @{ Label = "7. Essentials";      File = "PowerPPMEssentials_4.0.0.1.zip" }
-    @{ Label = "8. Resource Planner";File = "ResourcePlan_1.0.0.31.zip" }
-    @{ Label = "9. Power Heatmap";   File = "PowerHeatmap_2.0.27.zip" }
+    @{ Label = "1. Roadmap";         File = "PowerRoadmap_2.11.0.zip" }
+    @{ Label = "2. Gantt";           File = "PumPowerGanttSolution_4.5.0.zip" }
+    @{ Label = "3. Matrix";          File = "PowerMatrix_2.3.0.zip" }
+    @{ Label = "4. UX";              File = "PowerUX_1.6.7.zip" }
+    @{ Label = "5. Financials";      File = "PowerFinancialsSolution_3.18.0.zip" }
+    @{ Label = "6. Board";           File = "PowerBoard_2.12.0.zip" }
+    @{ Label = "7. Essentials";      File = "PowerPPMEssentials_4.2.0.zip" }
+    @{ Label = "8. Resource Planner";File = "ResourcePlan_1.0.0.39.zip" }
+    @{ Label = "9. Power Heatmap";   File = "PowerHeatmap_2.1.0.zip" }
 )
 
 $results = @()

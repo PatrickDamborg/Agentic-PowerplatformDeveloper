@@ -1,0 +1,722 @@
+{
+  "properties": {
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        }
+      },
+      "triggers": {
+        "When_Copilot_Studio_calls_a_flow": {
+          "type": "OpenApiConnection",
+          "kind": "PowerVirtualAgents",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_logicflows",
+              "operationId": "Run_a_flow_from_Microsoft_Copilot_Studio",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_logicflows"
+            },
+            "parameters": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "initiativeId"
+                ],
+                "properties": {
+                  "initiativeId": {
+                    "title": "Initiative id",
+                    "type": "string",
+                    "description": "GUID of the pum_Initiative to compute a status report for.",
+                    "x-ms-agent-required": true
+                  },
+                  "mode": {
+                    "title": "Mode",
+                    "type": "string",
+                    "description": "'auto' (default) or 'fresh' to force a live recompute. Reserved for the pre-computed cache \u2014 this version of the flow always computes fresh."
+                  }
+                }
+              }
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        }
+      },
+      "actions": {
+        "Try_Scope": {
+          "type": "Scope",
+          "runAfter": {},
+          "actions": {
+            "Get_Initiative": {
+              "type": "OpenApiConnection",
+              "runAfter": {},
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "GetItem",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "pum_initiatives",
+                  "recordId": "@triggerBody()?['initiativeId']",
+                  "$select": "pum_name,pum_currentstagetextfield,_pum_sponsor_value,pum_totalbudget"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Agg_Incomplete_Tasks": {
+              "type": "OpenApiConnection",
+              "runAfter": {
+                "Get_Initiative": [
+                  "Succeeded"
+                ]
+              },
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "pum_gantttasks",
+                  "fetchXml": "<fetch aggregate=\"true\"><entity name=\"pum_gantttask\"><attribute name=\"pum_gantttaskid\" alias=\"incompletecount\" aggregate=\"count\" /><filter type=\"and\"><condition attribute=\"pum_initiative\" operator=\"eq\" value=\"@{triggerBody()?['initiativeId']}\" /><condition attribute=\"pum_percentcomplete\" operator=\"lt\" value=\"100\" /><condition attribute=\"pum_tasktype\" operator=\"ne\" value=\"493840001\" /></filter></entity></fetch>"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Agg_Overdue_Tasks": {
+              "type": "OpenApiConnection",
+              "runAfter": {
+                "Agg_Incomplete_Tasks": [
+                  "Succeeded"
+                ]
+              },
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "pum_gantttasks",
+                  "fetchXml": "<fetch aggregate=\"true\"><entity name=\"pum_gantttask\"><attribute name=\"pum_gantttaskid\" alias=\"overduecount\" aggregate=\"count\" /><attribute name=\"pum_enddate\" alias=\"worstenddate\" aggregate=\"min\" /><filter type=\"and\"><condition attribute=\"pum_initiative\" operator=\"eq\" value=\"@{triggerBody()?['initiativeId']}\" /><condition attribute=\"pum_percentcomplete\" operator=\"lt\" value=\"100\" /><condition attribute=\"pum_tasktype\" operator=\"ne\" value=\"493840001\" /><condition attribute=\"pum_enddate\" operator=\"lt\" value=\"@{utcNow()}\" /></filter></entity></fetch>"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Agg_Next_Milestone": {
+              "type": "OpenApiConnection",
+              "runAfter": {
+                "Agg_Overdue_Tasks": [
+                  "Succeeded"
+                ]
+              },
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "pum_gantttasks",
+                  "fetchXml": "<fetch aggregate=\"true\"><entity name=\"pum_gantttask\"><attribute name=\"pum_enddate\" alias=\"nextmilestonedate\" aggregate=\"min\" /><filter type=\"and\"><condition attribute=\"pum_initiative\" operator=\"eq\" value=\"@{triggerBody()?['initiativeId']}\" /><condition attribute=\"pum_tasktype\" operator=\"eq\" value=\"493840002\" /><condition attribute=\"pum_enddate\" operator=\"ge\" value=\"@{utcNow()}\" /></filter></entity></fetch>"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Compute_Timeline_Rating": {
+              "type": "Compose",
+              "runAfter": {
+                "Agg_Next_Milestone": [
+                  "Succeeded"
+                ]
+              },
+              "inputs": {
+                "incompleteCount": "@coalesce(first(outputs('Agg_Incomplete_Tasks')?['body/value'])?['incompletecount'], 0)",
+                "overdueCount": "@coalesce(first(outputs('Agg_Overdue_Tasks')?['body/value'])?['overduecount'], 0)",
+                "worstOverdueDays": "@if(equals(coalesce(first(outputs('Agg_Overdue_Tasks')?['body/value'])?['overduecount'], 0), 0), 0, div(sub(ticks(utcNow()), ticks(first(outputs('Agg_Overdue_Tasks')?['body/value'])?['worstenddate'])), 864000000000))",
+                "nextMilestoneDate": "@first(outputs('Agg_Next_Milestone')?['body/value'])?['nextmilestonedate']",
+                "ratingInt": "@if(equals(coalesce(first(outputs('Agg_Overdue_Tasks')?['body/value'])?['overduecount'], 0), 0), 493840003, if(or(greater(div(sub(ticks(utcNow()), ticks(first(outputs('Agg_Overdue_Tasks')?['body/value'])?['worstenddate'])), 864000000000), 30), greater(mul(div(float(coalesce(first(outputs('Agg_Overdue_Tasks')?['body/value'])?['overduecount'], 0)), float(max(coalesce(first(outputs('Agg_Incomplete_Tasks')?['body/value'])?['incompletecount'], 0), 1))), 100), 25)), 493840001, 493840002))"
+              }
+            },
+            "List_Open_Risks": {
+              "type": "OpenApiConnection",
+              "runAfter": {
+                "Compute_Timeline_Rating": [
+                  "Succeeded"
+                ]
+              },
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "pum_risks",
+                  "$filter": "_pum_initiative_value eq @{triggerBody()?['initiativeId']} and pum_riskstatus ne 493840002 and pum_riskstatus ne 493840003",
+                  "$select": "pum_name,pum_probability,pum_riskimpact,pum_riskduedate",
+                  "$orderby": "pum_probability desc,pum_riskimpact desc",
+                  "$top": 25
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Compute_Risk_Metrics": {
+              "type": "Compose",
+              "runAfter": {
+                "List_Open_Risks": [
+                  "Succeeded"
+                ]
+              },
+              "inputs": {
+                "openRiskCount": "@length(body('List_Open_Risks')?['value'])",
+                "highRiskCount": "@length(filter(body('List_Open_Risks')?['value'], and(greaterOrEquals(item()?['pum_probability'], int(parameters('pum_HighRiskProbabilityThreshold (pum_HighRiskProbabilityThreshold)'))), greaterOrEquals(item()?['pum_riskimpact'], int(parameters('pum_HighRiskImpactThreshold (pum_HighRiskImpactThreshold)'))))))",
+                "qualityRiskCount": "@length(filter(body('List_Open_Risks')?['value'], contains(toLower(item()?['pum_name']), 'quality')))"
+              }
+            },
+            "Select_Top_Risks": {
+              "type": "Select",
+              "runAfter": {
+                "Compute_Risk_Metrics": [
+                  "Succeeded"
+                ]
+              },
+              "inputs": {
+                "from": "@take(body('List_Open_Risks')?['value'], 5)",
+                "select": {
+                  "name": "@item()?['pum_name']",
+                  "probability": "@item()?['pum_probability']",
+                  "impact": "@item()?['pum_riskimpact']",
+                  "dueDate": "@item()?['pum_riskduedate']"
+                }
+              }
+            },
+            "Agg_Change_Requests": {
+              "type": "OpenApiConnection",
+              "runAfter": {
+                "Select_Top_Risks": [
+                  "Succeeded"
+                ]
+              },
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "pum_changerequests",
+                  "fetchXml": "<fetch aggregate=\"true\"><entity name=\"pum_changerequest\"><attribute name=\"pum_changerequestid\" alias=\"openchangerequestcount\" aggregate=\"count\" /><filter type=\"and\"><condition attribute=\"pum_initiative\" operator=\"eq\" value=\"@{triggerBody()?['initiativeId']}\" /><condition attribute=\"statecode\" operator=\"eq\" value=\"0\" /></filter></entity></fetch>"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Compute_Scope_Rating": {
+              "type": "Compose",
+              "runAfter": {
+                "Agg_Change_Requests": [
+                  "Succeeded"
+                ]
+              },
+              "inputs": {
+                "openRiskCount": "@outputs('Compute_Risk_Metrics')?['openRiskCount']",
+                "highRiskCount": "@outputs('Compute_Risk_Metrics')?['highRiskCount']",
+                "openChangeRequestCount": "@coalesce(first(outputs('Agg_Change_Requests')?['body/value'])?['openchangerequestcount'], 0)",
+                "ratingInt": "@if(greater(outputs('Compute_Risk_Metrics')?['highRiskCount'], 0), 493840001, if(greater(coalesce(first(outputs('Agg_Change_Requests')?['body/value'])?['openchangerequestcount'], 0), 0), 493840002, if(greater(outputs('Compute_Risk_Metrics')?['openRiskCount'], 0), 493840002, 493840003)))"
+              }
+            },
+            "Agg_Quality_Lessons": {
+              "type": "OpenApiConnection",
+              "runAfter": {
+                "Compute_Scope_Rating": [
+                  "Succeeded"
+                ]
+              },
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "pum_lessonslearneds",
+                  "fetchXml": "<fetch aggregate=\"true\"><entity name=\"pum_lessonslearned\"><attribute name=\"pum_lessonslearnedid\" alias=\"qualitylessoncount\" aggregate=\"count\" /><filter type=\"and\"><condition attribute=\"pum_initiative\" operator=\"eq\" value=\"@{triggerBody()?['initiativeId']}\" /><condition attribute=\"pum_impact\" operator=\"eq\" value=\"493840001\" /><condition attribute=\"createdon\" operator=\"ge\" value=\"@{addDays(utcNow(), mul(-1, int(parameters('pum_QualityLessonsLookbackDays (pum_QualityLessonsLookbackDays)'))))}\" /></filter></entity></fetch>"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Compute_Quality_Rating": {
+              "type": "Compose",
+              "runAfter": {
+                "Agg_Quality_Lessons": [
+                  "Succeeded"
+                ]
+              },
+              "inputs": {
+                "qualityLessonCount": "@coalesce(first(outputs('Agg_Quality_Lessons')?['body/value'])?['qualitylessoncount'], 0)",
+                "qualityRiskCount": "@outputs('Compute_Risk_Metrics')?['qualityRiskCount']",
+                "ratingInt": "@if(and(greater(coalesce(first(outputs('Agg_Quality_Lessons')?['body/value'])?['qualitylessoncount'], 0), 0), greater(outputs('Compute_Risk_Metrics')?['qualityRiskCount'], 0)), 493840001, if(or(greater(coalesce(first(outputs('Agg_Quality_Lessons')?['body/value'])?['qualitylessoncount'], 0), 0), greater(outputs('Compute_Risk_Metrics')?['qualityRiskCount'], 0)), 493840002, 493840003))"
+              }
+            },
+            "Agg_Budget": {
+              "type": "OpenApiConnection",
+              "runAfter": {
+                "Compute_Quality_Rating": [
+                  "Succeeded"
+                ]
+              },
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "pum_pf_powerfinancialsdatas",
+                  "fetchXml": "<fetch aggregate=\"true\"><entity name=\"pum_pf_powerfinancialsdata\"><attribute name=\"pum_pf_valuedec\" alias=\"budgetsum\" aggregate=\"sum\" /><filter type=\"and\"><condition attribute=\"pum_pf_initiative\" operator=\"eq\" value=\"@{triggerBody()?['initiativeId']}\" /><condition attribute=\"pum_pf_costtypedef\" operator=\"eq\" value=\"1\" /></filter></entity></fetch>"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Agg_Actuals": {
+              "type": "OpenApiConnection",
+              "runAfter": {
+                "Agg_Budget": [
+                  "Succeeded"
+                ]
+              },
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "pum_pf_powerfinancialsdatas",
+                  "fetchXml": "<fetch aggregate=\"true\"><entity name=\"pum_pf_powerfinancialsdata\"><attribute name=\"pum_pf_valuedec\" alias=\"actualssum\" aggregate=\"sum\" /><filter type=\"and\"><condition attribute=\"pum_pf_initiative\" operator=\"eq\" value=\"@{triggerBody()?['initiativeId']}\" /><condition attribute=\"pum_pf_costtypedef\" operator=\"eq\" value=\"2\" /></filter></entity></fetch>"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Agg_Forecast": {
+              "type": "OpenApiConnection",
+              "runAfter": {
+                "Agg_Actuals": [
+                  "Succeeded"
+                ]
+              },
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "pum_pf_powerfinancialsdatas",
+                  "fetchXml": "<fetch aggregate=\"true\"><entity name=\"pum_pf_powerfinancialsdata\"><attribute name=\"pum_pf_valuedec\" alias=\"forecastsum\" aggregate=\"sum\" /><filter type=\"and\"><condition attribute=\"pum_pf_initiative\" operator=\"eq\" value=\"@{triggerBody()?['initiativeId']}\" /><condition attribute=\"pum_pf_costtypedef\" operator=\"eq\" value=\"3\" /></filter></entity></fetch>"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Compute_Financials_Rating": {
+              "type": "Compose",
+              "runAfter": {
+                "Agg_Forecast": [
+                  "Succeeded"
+                ]
+              },
+              "inputs": {
+                "hasData": "@not(equals(first(outputs('Agg_Budget')?['body/value'])?['budgetsum'], null))",
+                "budget": "@coalesce(first(outputs('Agg_Budget')?['body/value'])?['budgetsum'], 0)",
+                "actuals": "@coalesce(first(outputs('Agg_Actuals')?['body/value'])?['actualssum'], 0)",
+                "forecast": "@coalesce(first(outputs('Agg_Forecast')?['body/value'])?['forecastsum'], 0)",
+                "variancePct": "@if(equals(coalesce(first(outputs('Agg_Budget')?['body/value'])?['budgetsum'], 0), 0), 0, mul(div(sub(coalesce(first(outputs('Agg_Forecast')?['body/value'])?['forecastsum'], 0), coalesce(first(outputs('Agg_Budget')?['body/value'])?['budgetsum'], 0)), coalesce(first(outputs('Agg_Budget')?['body/value'])?['budgetsum'], 0)), 100))",
+                "ratingInt": "@if(equals(first(outputs('Agg_Budget')?['body/value'])?['budgetsum'], null), 493840000, if(equals(coalesce(first(outputs('Agg_Budget')?['body/value'])?['budgetsum'], 0), 0), if(lessOrEquals(coalesce(first(outputs('Agg_Forecast')?['body/value'])?['forecastsum'], 0), 0), 493840003, 493840001), if(lessOrEquals(coalesce(first(outputs('Agg_Forecast')?['body/value'])?['forecastsum'], 0), coalesce(first(outputs('Agg_Budget')?['body/value'])?['budgetsum'], 0)), 493840003, if(lessOrEquals(mul(div(sub(coalesce(first(outputs('Agg_Forecast')?['body/value'])?['forecastsum'], 0), coalesce(first(outputs('Agg_Budget')?['body/value'])?['budgetsum'], 0)), coalesce(first(outputs('Agg_Budget')?['body/value'])?['budgetsum'], 0)), 100), 10), 493840002, 493840001))))"
+              }
+            },
+            "Agg_Proposed_Hours": {
+              "type": "OpenApiConnection",
+              "runAfter": {
+                "Compute_Financials_Rating": [
+                  "Succeeded"
+                ]
+              },
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "pum_proposes",
+                  "fetchXml": "<fetch aggregate=\"true\"><entity name=\"pum_propose\"><attribute name=\"pum_work\" alias=\"proposedhours\" aggregate=\"sum\" /><filter type=\"and\"><condition attribute=\"pum_initiative\" operator=\"eq\" value=\"@{triggerBody()?['initiativeId']}\" /></filter></entity></fetch>"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Agg_Committed_Hours": {
+              "type": "OpenApiConnection",
+              "runAfter": {
+                "Agg_Proposed_Hours": [
+                  "Succeeded"
+                ]
+              },
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "pum_commits",
+                  "fetchXml": "<fetch aggregate=\"true\"><entity name=\"pum_commit\"><attribute name=\"pum_work\" alias=\"committedhours\" aggregate=\"sum\" /><filter type=\"and\"><condition attribute=\"pum_initiative\" operator=\"eq\" value=\"@{triggerBody()?['initiativeId']}\" /></filter></entity></fetch>"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Compute_Resources_Rating": {
+              "type": "Compose",
+              "runAfter": {
+                "Agg_Committed_Hours": [
+                  "Succeeded"
+                ]
+              },
+              "inputs": {
+                "hasData": "@not(equals(first(outputs('Agg_Proposed_Hours')?['body/value'])?['proposedhours'], null))",
+                "proposedHours": "@coalesce(first(outputs('Agg_Proposed_Hours')?['body/value'])?['proposedhours'], 0)",
+                "committedHours": "@coalesce(first(outputs('Agg_Committed_Hours')?['body/value'])?['committedhours'], 0)",
+                "gapHours": "@sub(coalesce(first(outputs('Agg_Proposed_Hours')?['body/value'])?['proposedhours'], 0), coalesce(first(outputs('Agg_Committed_Hours')?['body/value'])?['committedhours'], 0))",
+                "gapPct": "@if(equals(coalesce(first(outputs('Agg_Proposed_Hours')?['body/value'])?['proposedhours'], 0), 0), 0, mul(div(sub(coalesce(first(outputs('Agg_Proposed_Hours')?['body/value'])?['proposedhours'], 0), coalesce(first(outputs('Agg_Committed_Hours')?['body/value'])?['committedhours'], 0)), coalesce(first(outputs('Agg_Proposed_Hours')?['body/value'])?['proposedhours'], 0)), 100))",
+                "ratingInt": "@if(equals(first(outputs('Agg_Proposed_Hours')?['body/value'])?['proposedhours'], null), 493840000, if(lessOrEquals(sub(coalesce(first(outputs('Agg_Proposed_Hours')?['body/value'])?['proposedhours'], 0), coalesce(first(outputs('Agg_Committed_Hours')?['body/value'])?['committedhours'], 0)), 0), 493840003, if(lessOrEquals(mul(div(sub(coalesce(first(outputs('Agg_Proposed_Hours')?['body/value'])?['proposedhours'], 0), coalesce(first(outputs('Agg_Committed_Hours')?['body/value'])?['committedhours'], 0)), coalesce(first(outputs('Agg_Proposed_Hours')?['body/value'])?['proposedhours'], 1)), 100), 20), 493840002, 493840001)))"
+              }
+            },
+            "Get_Latest_Report": {
+              "type": "OpenApiConnection",
+              "runAfter": {
+                "Compute_Resources_Rating": [
+                  "Succeeded"
+                ]
+              },
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "ListRecords",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "pum_statusreportings",
+                  "$filter": "_pum_initiative_value eq @{triggerBody()?['initiativeId']}",
+                  "$select": "pum_statusdate,pum_kpinewsummary,pum_comment",
+                  "$orderby": "pum_statusdate desc",
+                  "$top": 1
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Compute_Trend": {
+              "type": "Compose",
+              "runAfter": {
+                "Get_Latest_Report": [
+                  "Succeeded"
+                ]
+              },
+              "inputs": {
+                "hasPriorReport": "@greater(length(body('Get_Latest_Report')?['value']), 0)",
+                "priorReportDate": "@if(greater(length(body('Get_Latest_Report')?['value']), 0), first(body('Get_Latest_Report')?['value'])?['pum_statusdate'], null)",
+                "priorSummaryRatingInt": "@if(greater(length(body('Get_Latest_Report')?['value']), 0), first(body('Get_Latest_Report')?['value'])?['pum_kpinewsummary'], null)",
+                "priorComment": "@if(greater(length(body('Get_Latest_Report')?['value']), 0), first(body('Get_Latest_Report')?['value'])?['pum_comment'], null)"
+              }
+            },
+            "Rating_Labels": {
+              "type": "Compose",
+              "runAfter": {
+                "Compute_Trend": [
+                  "Succeeded"
+                ]
+              },
+              "inputs": {
+                "493840000": "N/A",
+                "493840001": "Red",
+                "493840002": "Yellow",
+                "493840003": "Green"
+              }
+            },
+            "Compute_Overall_Rating": {
+              "type": "Compose",
+              "runAfter": {
+                "Rating_Labels": [
+                  "Succeeded"
+                ]
+              },
+              "inputs": {
+                "ratingInts": "@createArray(outputs('Compute_Timeline_Rating')?['ratingInt'], outputs('Compute_Financials_Rating')?['ratingInt'], outputs('Compute_Scope_Rating')?['ratingInt'], outputs('Compute_Quality_Rating')?['ratingInt'], outputs('Compute_Resources_Rating')?['ratingInt'])",
+                "ratingInt": "@if(greater(length(filter(createArray(outputs('Compute_Timeline_Rating')?['ratingInt'], outputs('Compute_Financials_Rating')?['ratingInt'], outputs('Compute_Scope_Rating')?['ratingInt'], outputs('Compute_Quality_Rating')?['ratingInt'], outputs('Compute_Resources_Rating')?['ratingInt']), equals(item(), 493840001))), 0), 493840001, if(greater(length(filter(createArray(outputs('Compute_Timeline_Rating')?['ratingInt'], outputs('Compute_Financials_Rating')?['ratingInt'], outputs('Compute_Scope_Rating')?['ratingInt'], outputs('Compute_Quality_Rating')?['ratingInt'], outputs('Compute_Resources_Rating')?['ratingInt']), equals(item(), 493840002))), 0), 493840002, if(equals(length(filter(createArray(outputs('Compute_Timeline_Rating')?['ratingInt'], outputs('Compute_Financials_Rating')?['ratingInt'], outputs('Compute_Scope_Rating')?['ratingInt'], outputs('Compute_Quality_Rating')?['ratingInt'], outputs('Compute_Resources_Rating')?['ratingInt']), equals(item(), 493840003))), 5), 493840003, 493840000)))"
+              }
+            },
+            "Compute_Data_Gaps": {
+              "type": "Compose",
+              "runAfter": {
+                "Compute_Overall_Rating": [
+                  "Succeeded"
+                ]
+              },
+              "inputs": "@filter(createArray(if(equals(outputs('Compute_Financials_Rating')?['ratingInt'], 493840000), 'No financial data found for this initiative \u2014 Financials rated N/A.', null), if(equals(outputs('Compute_Resources_Rating')?['ratingInt'], 493840000), 'No resource plan data found for this initiative \u2014 Resources rated N/A.', null), if(and(equals(outputs('Compute_Scope_Rating')?['openRiskCount'], 0), equals(outputs('Compute_Scope_Rating')?['openChangeRequestCount'], 0)), 'Scope rated Green based on absence of open risks/change requests, not a confirmed clean status.', null)), not(equals(item(), null)))"
+            },
+            "Compose_Payload": {
+              "type": "Compose",
+              "runAfter": {
+                "Compute_Data_Gaps": [
+                  "Succeeded"
+                ]
+              },
+              "inputs": {
+                "initiativeId": "@triggerBody()?['initiativeId']",
+                "initiativeName": "@outputs('Get_Initiative')?['body/pum_name']",
+                "currentPhase": "@outputs('Get_Initiative')?['body/pum_currentstagetextfield']",
+                "computedOn": "@utcNow()",
+                "source": "fresh",
+                "timeline": {
+                  "rating": "@outputs('Rating_Labels')?[string(outputs('Compute_Timeline_Rating')?['ratingInt'])]",
+                  "ratingInt": "@outputs('Compute_Timeline_Rating')?['ratingInt']",
+                  "incompleteCount": "@outputs('Compute_Timeline_Rating')?['incompleteCount']",
+                  "overdueCount": "@outputs('Compute_Timeline_Rating')?['overdueCount']",
+                  "worstOverdueDays": "@outputs('Compute_Timeline_Rating')?['worstOverdueDays']",
+                  "nextMilestoneDate": "@outputs('Compute_Timeline_Rating')?['nextMilestoneDate']"
+                },
+                "financials": {
+                  "rating": "@outputs('Rating_Labels')?[string(outputs('Compute_Financials_Rating')?['ratingInt'])]",
+                  "ratingInt": "@outputs('Compute_Financials_Rating')?['ratingInt']",
+                  "hasData": "@outputs('Compute_Financials_Rating')?['hasData']",
+                  "budget": "@outputs('Compute_Financials_Rating')?['budget']",
+                  "actuals": "@outputs('Compute_Financials_Rating')?['actuals']",
+                  "forecast": "@outputs('Compute_Financials_Rating')?['forecast']",
+                  "variancePct": "@outputs('Compute_Financials_Rating')?['variancePct']"
+                },
+                "scope": {
+                  "rating": "@outputs('Rating_Labels')?[string(outputs('Compute_Scope_Rating')?['ratingInt'])]",
+                  "ratingInt": "@outputs('Compute_Scope_Rating')?['ratingInt']",
+                  "openRiskCount": "@outputs('Compute_Scope_Rating')?['openRiskCount']",
+                  "highRiskCount": "@outputs('Compute_Scope_Rating')?['highRiskCount']",
+                  "openChangeRequestCount": "@outputs('Compute_Scope_Rating')?['openChangeRequestCount']",
+                  "topRisks": "@body('Select_Top_Risks')"
+                },
+                "quality": {
+                  "rating": "@outputs('Rating_Labels')?[string(outputs('Compute_Quality_Rating')?['ratingInt'])]",
+                  "ratingInt": "@outputs('Compute_Quality_Rating')?['ratingInt']",
+                  "qualityLessonCount": "@outputs('Compute_Quality_Rating')?['qualityLessonCount']",
+                  "qualityRiskCount": "@outputs('Compute_Quality_Rating')?['qualityRiskCount']"
+                },
+                "resources": {
+                  "rating": "@outputs('Rating_Labels')?[string(outputs('Compute_Resources_Rating')?['ratingInt'])]",
+                  "ratingInt": "@outputs('Compute_Resources_Rating')?['ratingInt']",
+                  "hasData": "@outputs('Compute_Resources_Rating')?['hasData']",
+                  "proposedHours": "@outputs('Compute_Resources_Rating')?['proposedHours']",
+                  "committedHours": "@outputs('Compute_Resources_Rating')?['committedHours']",
+                  "gapHours": "@outputs('Compute_Resources_Rating')?['gapHours']",
+                  "gapPct": "@outputs('Compute_Resources_Rating')?['gapPct']"
+                },
+                "overall": {
+                  "rating": "@outputs('Rating_Labels')?[string(outputs('Compute_Overall_Rating')?['ratingInt'])]",
+                  "ratingInt": "@outputs('Compute_Overall_Rating')?['ratingInt']"
+                },
+                "trend": {
+                  "hasPriorReport": "@outputs('Compute_Trend')?['hasPriorReport']",
+                  "priorReportDate": "@outputs('Compute_Trend')?['priorReportDate']",
+                  "priorSummaryRating": "@if(equals(outputs('Compute_Trend')?['priorSummaryRatingInt'], null), null, outputs('Rating_Labels')?[string(outputs('Compute_Trend')?['priorSummaryRatingInt'])])",
+                  "priorComment": "@outputs('Compute_Trend')?['priorComment']"
+                },
+                "dataGaps": "@outputs('Compute_Data_Gaps')"
+              }
+            },
+            "Respond_to_Copilot": {
+              "type": "OpenApiConnectionWebhookResponse",
+              "runAfter": {
+                "Compose_Payload": [
+                  "Succeeded"
+                ]
+              },
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_logicflows",
+                  "operationId": "Response",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_logicflows"
+                },
+                "parameters": {
+                  "response/value": "@outputs('Compose_Payload')",
+                  "response/schema": {
+                    "type": "object",
+                    "properties": {
+                      "initiativeId": {
+                        "type": "string",
+                        "description": "Echo of the requested initiative GUID."
+                      },
+                      "initiativeName": {
+                        "type": "string",
+                        "description": "Initiative display name."
+                      },
+                      "currentPhase": {
+                        "type": "string",
+                        "description": "Current BPF stage / phase name."
+                      },
+                      "computedOn": {
+                        "type": "string",
+                        "description": "UTC timestamp this data was computed."
+                      },
+                      "source": {
+                        "type": "string",
+                        "description": "Always 'fresh' in this version of the flow."
+                      },
+                      "timeline": {
+                        "type": "object",
+                        "description": "Schedule dimension: rating, ratingInt, incompleteCount, overdueCount, worstOverdueDays, nextMilestoneDate."
+                      },
+                      "financials": {
+                        "type": "object",
+                        "description": "Financials dimension: rating, ratingInt, hasData, budget, actuals, forecast, variancePct."
+                      },
+                      "scope": {
+                        "type": "object",
+                        "description": "Scope dimension: rating, ratingInt, openRiskCount, highRiskCount, openChangeRequestCount, topRisks array (name, probability, impact, dueDate)."
+                      },
+                      "quality": {
+                        "type": "object",
+                        "description": "Quality dimension: rating, ratingInt, qualityLessonCount, qualityRiskCount."
+                      },
+                      "resources": {
+                        "type": "object",
+                        "description": "Resources dimension: rating, ratingInt, hasData, proposedHours, committedHours, gapHours, gapPct."
+                      },
+                      "overall": {
+                        "type": "object",
+                        "description": "Derived overall rating: rating, ratingInt."
+                      },
+                      "trend": {
+                        "type": "object",
+                        "description": "Prior report context: hasPriorReport, priorReportDate, priorSummaryRating, priorComment."
+                      },
+                      "dataGaps": {
+                        "type": "array",
+                        "description": "Human-readable notes about any dimension rated N/A or Green-by-absence-of-data. Empty array if none."
+                      }
+                    }
+                  }
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            }
+          }
+        },
+        "Catch_Scope": {
+          "type": "Scope",
+          "runAfter": {
+            "Try_Scope": [
+              "Failed",
+              "TimedOut"
+            ]
+          },
+          "actions": {
+            "Compose_Error_Details": {
+              "type": "Compose",
+              "runAfter": {},
+              "inputs": {
+                "flowName": "@workflow()?['tags']['flowDisplayName']",
+                "runId": "@workflow()?['run']['name']",
+                "errorResult": "@result('Try_Scope')",
+                "timestamp": "@utcNow()"
+              }
+            },
+            "Log_Error_Row": {
+              "type": "OpenApiConnection",
+              "runAfter": {
+                "Compose_Error_Details": [
+                  "Succeeded"
+                ]
+              },
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_commondataserviceforapps",
+                  "operationId": "CreateRecord",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+                },
+                "parameters": {
+                  "entityName": "pum_activitylogs",
+                  "item/pum_category": "CopilotSkill",
+                  "item/pum_details": "@{string(outputs('Compose_Error_Details'))}"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Respond_to_Copilot_With_Error": {
+              "type": "OpenApiConnectionWebhookResponse",
+              "runAfter": {
+                "Log_Error_Row": [
+                  "Succeeded",
+                  "Failed",
+                  "TimedOut",
+                  "Skipped"
+                ]
+              },
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_logicflows",
+                  "operationId": "Response",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_logicflows"
+                },
+                "parameters": {
+                  "response/value": {
+                    "status": "error",
+                    "message": "Could not compute status data for this initiative. Check the activity log."
+                  },
+                  "response/schema": {
+                    "type": "object",
+                    "properties": {
+                      "status": {
+                        "type": "string",
+                        "description": "Always 'error' on this path."
+                      },
+                      "message": {
+                        "type": "string",
+                        "description": "Human-readable error summary."
+                      }
+                    }
+                  }
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            }
+          }
+        }
+      }
+    },
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "pum_sharedcommondataserviceforapps_1479b"
+        },
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        }
+      },
+      "shared_logicflows": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "pum_sharedlogicflows"
+        },
+        "api": {
+          "name": "shared_logicflows"
+        }
+      }
+    },
+    "templateName": ""
+  },
+  "schemaVersion": "1.0.0.0",
+  "_comment": "Skill: fetch and deterministically rate all 5 status-report dimensions for one initiative in a single agent tool call, replacing 6-8 sequential Dataverse MCP read_query round-trips. KPI picklist ints are the VERIFIED pdausa mapping (493840001=Red, 493840002=Yellow, 493840003=Green, 493840000=N/A/NotSet) \u2014 confirmed live against pum_statusreportings on 2026-07-03; this differs from older repo docs which had it backwards. Aggregates use FetchXml (aggregate=\"true\") via the List rows action's fetchXml parameter \u2014 this is the first use of this technique in the repo; VERIFY the returned alias key names (e.g. 'incompletecount') match the connector's actual JSON shape on first test run via the flow-debugger loop, and adjust the first()/coalesce() addressing if the connector nests aggregate values differently. Resources/Financials rating simplifications: no total-record N/A detection for Timeline/Quality (documented simplification for the demo \u2014 see plan). Quality uses pum_impact=Negative(493840001) as the proxy signal since pum_lessonslearned has no dedicated Quality category. Cache/mode handling (Check_Cache branch) is added in Phase 2 via update-flow.ps1 once pum_statusdraftcache exists \u2014 this version always computes fresh."
+}
