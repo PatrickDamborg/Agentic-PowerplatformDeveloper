@@ -3,6 +3,8 @@ name: copilot-skill-authoring
 description: "How to create skill files (.md with YAML frontmatter) for the Copilot Studio agent skill uploader. Use whenever the user wants to create a new skill for a Copilot Studio agent, package domain knowledge as an uploadable skill file, or structure a skill with a main SKILL.md and supporting reference files."
 ---
 
+> **Not the same thing as Dataverse Business Skills.** This skill covers *writing* skill content (frontmatter + structure). For *programmatically creating/updating/syncing* Business Skill records in Dataverse (a real, solution-aware, API-accessible entity — distinct from Copilot Studio's portal-only Agent Skills upload), see the `business-skills` skill.
+
 # Copilot Studio Skill Authoring
 
 Skills for the Copilot Studio agent experience are Markdown files with YAML frontmatter. When uploaded, they give an agent focused domain knowledge or procedural guidance for a specific area.

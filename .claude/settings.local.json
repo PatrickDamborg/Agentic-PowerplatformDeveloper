@@ -11,7 +11,6 @@
       "Bash(python3 -c \"import msal\")",
       "Bash(pip3 install *)",
       "Bash(python3 *)",
-      "Bash(node /Users/patrickdamborg/.claude/plugins/cache/skills-for-copilot-studio/copilot-studio/1.0.7/scripts/schema-lookup.bundle.js summary AgentDialog)",
       "Bash(node -e ' *)",
       "Bash(node *)",
       "Bash(arch *)",
@@ -19,11 +18,7 @@
       "Bash(git commit *)",
       "Bash(gh pr *)",
       "Bash(git fetch *)",
-      "Bash(git pull *)",
-      "Read(//Users/patrickdamborg/**)",
-      "Bash(unzip -l QMSagent_1_0_0_2.zip)",
-      "Read(//private/tmp/qms_agent_analysis/environmentvariabledefinitions/cr7b3_qmsAgent.envVar.lWXiJpo_hnWDAjG4IDuk2/**)",
-      "Bash(grep -v '^_template$')"
+      "Bash(git pull *)"
     ]
   },
   "enableAllProjectMcpServers": true,
@@ -31,6 +26,7 @@
     "microsoft-learn"
   ],
   "enabledPlugins": {
-    "copilot-studio@skills-for-copilot-studio": true
+    "copilot-studio@skills-for-copilot-studio": true,
+    "dataverse@claude-plugins-official": true
   }
 }

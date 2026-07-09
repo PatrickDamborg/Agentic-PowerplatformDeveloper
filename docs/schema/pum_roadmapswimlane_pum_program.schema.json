@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "pum_roadmapswimlane_pum_program.schema.json",
+  "title": "PumRoadmapswimlanePumProgram",
+  "description": "Read-shape for `pum_roadmapswimlane_pum_program` from the Dataverse Web API (lookups as `_<name>_value`). Machine-readable contract for runtime drift-detection in the shipped app.",
+  "x-dataverse": {
+    "table": "pum_roadmapswimlane_pum_program",
+    "env": "https://esben.crm.dynamics.com",
+    "generated": "2026-06-16",
+    "regenerate": "uv run python cli.py gen-schema pum_roadmapswimlane_pum_program"
+  },
+  "type": "object",
+  "properties": {
+    "pum_programid": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "pum_roadmapswimlane_pum_programid": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "pum_roadmapswimlaneid": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "versionnumber": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    }
+  },
+  "additionalProperties": true,
+  "required": [
+    "pum_programid",
+    "pum_roadmapswimlane_pum_programid",
+    "pum_roadmapswimlaneid"
+  ]
+}

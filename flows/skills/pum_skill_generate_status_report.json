@@ -230,5 +230,5 @@
       }
     }
   },
-  "_comment": "Skill: generate a RAG-coloured status report for a project. RAG rule lives in the Compute_RAG Compose (>=2 overdue = RED; 1 overdue = AMBER; else GREEN). Replace the threshold with an environment variable via create-env-variable.ps1 before production. Verify pum_milestones fields against schema-dump.json before deploy."
+  "_comment": "DEPRECATED (2026-07-03) — do not deploy. References pum_projects/pum_milestones, neither of which exist in the pdausa xPM schema (the real entities are pum_initiatives/pum_gantttasks). Never actually deployed to pdausa (confirmed via list-flows.ps1). Superseded by pum_skill_fetch_status_data.json, which covers this same use case plus Financials/Scope/Quality/Resources against the correct tables. Kept in git history for reference only."
 }

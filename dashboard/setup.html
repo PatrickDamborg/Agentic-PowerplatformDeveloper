@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Loading dashboard...</title>
+</head>
+<body style="background: #F1F5F7; display: flex; align-items: center; justify-content: center; min-height: 100vh;">
+  <div style="font-family: -apple-system, BlinkMacSystemFont, sans-serif; text-align: center;">
+    <h2>Configuring dashboard...</h2>
+    <p style="color: #666;">Pre-filling credentials...</p>
+  </div>
+  
+  <script>
+    // Pre-fill the dashboard with credentials from your Dataverse session
+    const config = {
+      clientId: "598edde1-e7c9-4143-bf04-e4f5071cfbdc",
+      tenantId: "0d3aa8f9-8168-4bc2-bda1-c3972e6d9352",
+      dataverseUrl: "https://pdausa.api.crm.dynamics.com",
+      prefix: "pda"
+    };
+    
+    localStorage.setItem("activityDashboard_config", JSON.stringify(config));
+    
+    // Redirect to the main dashboard
+    window.location.href = "index.html";
+  </script>
+</body>
+</html>

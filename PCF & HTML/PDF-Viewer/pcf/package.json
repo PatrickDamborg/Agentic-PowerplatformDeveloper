@@ -1,0 +1,21 @@
+{
+  "name": "pdfviewer",
+  "version": "1.4.0",
+  "description": "PCF SharePoint document/library viewer — inline preview and folder browsing via Microsoft Graph (per-user permissions) with open/download fallback",
+  "scripts": {
+    "build": "pcf-scripts build",
+    "clean": "pcf-scripts clean",
+    "rebuild": "pcf-scripts rebuild",
+    "start": "pcf-scripts start",
+    "start:watch": "pcf-scripts start watch",
+    "refreshTypes": "pcf-scripts refreshTypes"
+  },
+  "dependencies": {
+    "@azure/msal-browser": "^3.28.1"
+  },
+  "devDependencies": {
+    "pcf-scripts": "^1",
+    "pcf-start": "^1",
+    "@types/powerapps-component-framework": "^1"
+  }
+}

@@ -9,10 +9,10 @@ You are a Copilot Studio agent-skill builder for the XPM project and portfolio m
 
 ## Always load first
 
-- `.claude/skills/copilot-studio/copilot-studio.md` (methodology, seven maintainability rules, decision tree)
-- `.claude/skills/power-automate/power-automate.md` (flow conventions when touching flows)
-- `.claude/skills/data-model/data-model.md` (schema conventions when touching tables)
-- `.claude/skills/dataverse-api/dataverse-api.md` (web API usage rules)
+- `.claude/skills/copilot-studio/SKILL.md` (methodology, seven maintainability rules, decision tree)
+- `.claude/skills/power-automate/SKILL.md` (flow conventions when touching flows)
+- `.claude/skills/data-model/SKILL.md` (schema conventions when touching tables)
+- `.claude/skills/dataverse-api/SKILL.md` (web API usage rules)
 
 ## Mandatory step before any new Dataverse SchemaName
 

@@ -1,0 +1,441 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "pum_resource.schema.json",
+  "title": "PumResource",
+  "description": "Read-shape for `pum_resource` from the Dataverse Web API (lookups as `_<name>_value`). Machine-readable contract for runtime drift-detection in the shipped app.",
+  "x-dataverse": {
+    "table": "pum_resource",
+    "env": "https://esben.crm.dynamics.com",
+    "generated": "2026-06-16",
+    "regenerate": "uv run python cli.py gen-schema pum_resource"
+  },
+  "type": "object",
+  "properties": {
+    "pum_name": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "_ownerid_value": {
+      "type": "string",
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "systemuser",
+          "team"
+        ],
+        "bind": "OwnerId"
+      }
+    },
+    "pum_resourceid": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "statecode": {
+      "type": "integer",
+      "enum": [
+        0,
+        1
+      ],
+      "x-choices": {
+        "0": "Active",
+        "1": "Inactive"
+      }
+    },
+    "_createdby_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "systemuser"
+        ],
+        "bind": "CreatedBy"
+      }
+    },
+    "createdon": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "_createdonbehalfby_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "systemuser"
+        ],
+        "bind": "CreatedOnBehalfBy"
+      }
+    },
+    "exchangerate": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 1e-10,
+      "maximum": 100000000000,
+      "x-precision": 10
+    },
+    "importsequencenumber": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": -2147483648,
+      "maximum": 2147483647
+    },
+    "_modifiedby_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "systemuser"
+        ],
+        "bind": "ModifiedBy"
+      }
+    },
+    "modifiedon": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "_modifiedonbehalfby_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "systemuser"
+        ],
+        "bind": "ModifiedOnBehalfBy"
+      }
+    },
+    "new_issynthetic": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "overriddencreatedon": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date"
+    },
+    "_owningbusinessunit_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "businessunit"
+        ],
+        "bind": "OwningBusinessUnit"
+      }
+    },
+    "pum_additionalrbs": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 4000
+    },
+    "pum_azureid": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 100
+    },
+    "_pum_calendar_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "pum_calendar"
+        ],
+        "bind": "pum_Calendar"
+      }
+    },
+    "pum_company": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 500
+    },
+    "pum_dailycapacityhours": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": -100000000000,
+      "maximum": 100000000000,
+      "x-precision": 2
+    },
+    "pum_department": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 500
+    },
+    "pum_earliestavailable": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date"
+    },
+    "pum_email": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 200,
+      "format": "email"
+    },
+    "pum_firstname": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 200
+    },
+    "pum_jobtitle": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 250
+    },
+    "pum_lastname": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 250
+    },
+    "pum_latestavailable": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date"
+    },
+    "_pum_manager_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "pum_resource"
+        ],
+        "bind": "pum_Manager"
+      }
+    },
+    "pum_rate": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": -922337203685477.0,
+      "maximum": 922337203685477.0,
+      "x-precision": 2
+    },
+    "_pum_rbs_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "pum_rbs"
+        ],
+        "bind": "pum_RBS"
+      }
+    },
+    "_pum_relatedgenericresource_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "pum_resource"
+        ],
+        "bind": "pum_RelatedGenericResource"
+      }
+    },
+    "_pum_relateduser_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "systemuser"
+        ],
+        "bind": "pum_RelatedUser"
+      }
+    },
+    "pum_resourcetype": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "enum": [
+        493840000,
+        493840001,
+        493840002,
+        493840003,
+        null
+      ],
+      "x-choices": {
+        "493840000": "Named",
+        "493840001": "Generic",
+        "493840002": "Role",
+        "493840003": "Category"
+      }
+    },
+    "_pum_role_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "pum_role"
+        ],
+        "bind": "pum_Role"
+      }
+    },
+    "pum_seeddata": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 100
+    },
+    "pum_syncsource": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "enum": [
+        493840000,
+        493840001,
+        493840004,
+        493840002,
+        493840003,
+        null
+      ],
+      "x-choices": {
+        "493840000": "Power PPM",
+        "493840001": "Team Planner",
+        "493840004": "Time for Teams",
+        "493840002": "Microsoft Entra Id",
+        "493840003": "Custom"
+      }
+    },
+    "pum_userprincipalname": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 250
+    },
+    "pum_usertype": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 100
+    },
+    "statuscode": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "enum": [
+        1,
+        2,
+        null
+      ],
+      "x-choices": {
+        "1": "Active",
+        "2": "Inactive"
+      }
+    },
+    "timezoneruleversionnumber": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": -1,
+      "maximum": 2147483647
+    },
+    "_transactioncurrencyid_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "transactioncurrency"
+        ],
+        "bind": "TransactionCurrencyId"
+      }
+    },
+    "utcconversiontimezonecode": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": -1,
+      "maximum": 2147483647
+    },
+    "versionnumber": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    }
+  },
+  "additionalProperties": true,
+  "required": [
+    "_ownerid_value",
+    "pum_name",
+    "pum_resourceid",
+    "statecode"
+  ]
+}

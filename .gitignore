@@ -1,13 +1,37 @@
 .env
 .token
+*.token
 schema_dump.json
 env
 
 # Customer environment credentials and local session state
 customers/**/.env
 customers/**/session.json
+.session.json
+.solutions.json
 
 # OS / tooling noise
 .DS_Store
 **/.DS_Store
 node_modules/
+.playwright-mcp/
+
+# Local reference clone of the context-and/vibe-template GitHub template
+vibe-template/
+
+# Dev scratch output (Dataverse API dumps, build backups, verification screenshots)
+scratch_*.json
+scratchpad_*.json
+dashboard/index.prev.html
+/agentmonitor-embedded.png
+/dashboard-fix-verified.png
+/drawer-lightmode-fix*.png
+/my-dashboard-preview.png
+/agent-command-center-v2-original.html
+
+# agent-dashboard: contains a live API key, machine-specific dist duplicate, lock/cache/bundle noise
+agent-dashboard/.mcp.json
+agent-dashboard/dist/pda_agentdashboard-*.html
+agent-dashboard/.claude/scheduled_tasks.lock
+agent-dashboard/*.bundle
+**/__pycache__/

@@ -35,8 +35,10 @@ connectedAgents:
 
   - name: pum_xpm_status_reporting
     description: >-
-      Drafts status reports for xPM Initiatives across five dimensions:
-      Financials, Scope, Quality, Timeline, and Overall.
+      Drafts and saves status reports for xPM Initiatives across five
+      dimensions: Timeline, Financials, Scope, Quality, and Resources.
+      Fetches all data in a single flow call (pum_skill_fetch_status_data)
+      instead of sequential lookups — fast, near-instant on cached drafts.
 
   - name: pum_xpm_project_summarization
     description: >-

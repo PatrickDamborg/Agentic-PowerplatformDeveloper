@@ -27,6 +27,10 @@ This skill teaches agents **how to execute** xPM business processes using the Da
 | **List team members / resources** | User asks who is assigned to a project | `references/resource-management.md` → §Team Members |
 | **Check resource allocations** | User asks about capacity, proposed vs committed hours | `references/resource-management.md` → §Allocations |
 | **Add a team member** | User wants to assign someone to a project | `references/resource-management.md` → §Add Team Member |
+| **Configure heatmap placement** | Consultant placing heatmap on a form, dashboard, or nav link | `references/resource-management.md` → §Configuration |
+| **Choose process mode** | Switching between Propose+Commit and Commit Only | `references/resource-management.md` → §Configuration |
+| **Configure heatmap features** | Enabling/disabling feature toggles or checking incompatibilities | `references/resource-management.md` → §Configuration |
+| **Set up resources / assign security roles** | Resource data prerequisites or role assignment for heatmap users | `references/resource-management.md` → §Configuration |
 
 ---
 
