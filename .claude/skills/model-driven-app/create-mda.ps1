@@ -8,7 +8,7 @@
     Short unique identifier without publisher prefix, e.g. "FitnessTraining".
     Dataverse auto-prepends the solution publisher prefix on save.
 .PARAMETER SiteMapXml
-    Full SiteMap XML string. See model-driven-app.md for format.
+    Full SiteMap XML string. See SKILL.md for format.
 .PARAMETER EntityLogicalNames
     Array of entity logical names to add to the app, e.g. @("context_trainingprofile", "context_exercise")
 .PARAMETER SolutionName

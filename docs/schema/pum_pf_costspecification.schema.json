@@ -1,0 +1,335 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "pum_pf_costspecification.schema.json",
+  "title": "PumPfCostspecification",
+  "description": "Read-shape for `pum_pf_costspecification` from the Dataverse Web API (lookups as `_<name>_value`). Machine-readable contract for runtime drift-detection in the shipped app.",
+  "x-dataverse": {
+    "table": "pum_pf_costspecification",
+    "env": "https://esben.crm.dynamics.com",
+    "generated": "2026-06-16",
+    "regenerate": "uv run python cli.py gen-schema pum_pf_costspecification"
+  },
+  "type": "object",
+  "properties": {
+    "pum_costspecification": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "_ownerid_value": {
+      "type": "string",
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "systemuser",
+          "team"
+        ],
+        "bind": "OwnerId"
+      }
+    },
+    "pum_pf_costspecificationdef": {
+      "type": "integer",
+      "minimum": -2147483648,
+      "maximum": 2147483647
+    },
+    "pum_pf_costspecificationid": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "statecode": {
+      "type": "integer",
+      "enum": [
+        0,
+        1
+      ],
+      "x-choices": {
+        "0": "Active",
+        "1": "Inactive"
+      }
+    },
+    "_createdby_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "systemuser"
+        ],
+        "bind": "CreatedBy"
+      }
+    },
+    "createdon": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "_createdonbehalfby_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "systemuser"
+        ],
+        "bind": "CreatedOnBehalfBy"
+      }
+    },
+    "importsequencenumber": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": -2147483648,
+      "maximum": 2147483647
+    },
+    "_modifiedby_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "systemuser"
+        ],
+        "bind": "ModifiedBy"
+      }
+    },
+    "modifiedon": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "_modifiedonbehalfby_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "systemuser"
+        ],
+        "bind": "ModifiedOnBehalfBy"
+      }
+    },
+    "overriddencreatedon": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date"
+    },
+    "_owningbusinessunit_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "businessunit"
+        ],
+        "bind": "OwningBusinessUnit"
+      }
+    },
+    "pum_aggregationfortotals": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "enum": [
+        493840000,
+        493840001,
+        493840002,
+        null
+      ],
+      "x-choices": {
+        "493840000": "SUM",
+        "493840001": "AVERAGE",
+        "493840002": "HIDE"
+      }
+    },
+    "pum_costunitdefinition": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "enum": [
+        493840000,
+        493840001,
+        null
+      ],
+      "x-choices": {
+        "493840000": "Positive numbers",
+        "493840001": "Negative numbers"
+      }
+    },
+    "_pum_defaultfinancialunit_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "pum_pf_unit"
+        ],
+        "bind": "pum_DefaultFinancialUnit"
+      }
+    },
+    "_pum_financialstructure_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "pum_financialstructure"
+        ],
+        "bind": "pum_FinancialStructure"
+      }
+    },
+    "_pum_parentcostspecification_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "pum_pf_costspecification"
+        ],
+        "bind": "pum_ParentCostSpecification"
+      }
+    },
+    "pum_pf_costspec_order": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": -2147483648,
+      "maximum": 2147483647
+    },
+    "_pum_pf_costspec_pf_costarea_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "pum_pf_costarea"
+        ],
+        "bind": "pum_pf_costspec_pf_costarea"
+      }
+    },
+    "_pum_pf_costspec_pf_costcategory_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "pum_pf_costcategory"
+        ],
+        "bind": "pum_pf_costspec_pf_costcategory"
+      }
+    },
+    "_pum_pf_initiative_costspecification_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "pum_initiative"
+        ],
+        "bind": "pum_pf_initiative_costspecification"
+      }
+    },
+    "_pum_program_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "pum_program"
+        ],
+        "bind": "pum_Program"
+      }
+    },
+    "_pum_transactioncurrency_pum_pf_costsp_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "transactioncurrency"
+        ],
+        "bind": "pum_TransactionCurrency_pum_pf_costsp"
+      }
+    },
+    "statuscode": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "enum": [
+        1,
+        2,
+        null
+      ],
+      "x-choices": {
+        "1": "Active",
+        "2": "Inactive"
+      }
+    },
+    "timezoneruleversionnumber": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": -1,
+      "maximum": 2147483647
+    },
+    "utcconversiontimezonecode": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": -1,
+      "maximum": 2147483647
+    },
+    "versionnumber": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    }
+  },
+  "additionalProperties": true,
+  "required": [
+    "_ownerid_value",
+    "pum_costspecification",
+    "pum_pf_costspecificationdef",
+    "pum_pf_costspecificationid",
+    "statecode"
+  ]
+}

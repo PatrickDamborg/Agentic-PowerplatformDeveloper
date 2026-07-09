@@ -11,3 +11,6 @@ customers/**/session.json
 .DS_Store
 **/.DS_Store
 node_modules/
+
+# Local reference clone of the context-and/vibe-template GitHub template
+vibe-template/

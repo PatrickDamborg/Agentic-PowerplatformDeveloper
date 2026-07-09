@@ -1,0 +1,746 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "pum_idea.schema.json",
+  "title": "PumIdea",
+  "description": "Read-shape for `pum_idea` from the Dataverse Web API (lookups as `_<name>_value`). Machine-readable contract for runtime drift-detection in the shipped app.",
+  "x-dataverse": {
+    "table": "pum_idea",
+    "env": "https://esben.crm.dynamics.com",
+    "generated": "2026-06-16",
+    "regenerate": "uv run python cli.py gen-schema pum_idea"
+  },
+  "type": "object",
+  "properties": {
+    "pum_name": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "_ownerid_value": {
+      "type": "string",
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "systemuser",
+          "team"
+        ],
+        "bind": "OwnerId"
+      }
+    },
+    "pum_ideaid": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "statecode": {
+      "type": "integer",
+      "enum": [
+        0,
+        1
+      ],
+      "x-choices": {
+        "0": "Active",
+        "1": "Inactive"
+      }
+    },
+    "context_annualbenefits": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": -922337203685477.0,
+      "maximum": 922337203685477.0,
+      "x-precision": 2
+    },
+    "context_approvers": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 10000
+    },
+    "context_businessproblemopportunity": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 4000
+    },
+    "context_changemanagementreq": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "context_comments": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 2000
+    },
+    "context_confidencelevel": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "enum": [
+        236150000,
+        236150001,
+        236150002,
+        null
+      ],
+      "x-choices": {
+        "236150000": "Low",
+        "236150001": "Medium",
+        "236150002": "High"
+      }
+    },
+    "context_costavoidance": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": -922337203685477.0,
+      "maximum": 922337203685477.0,
+      "x-precision": 2
+    },
+    "context_costsavings": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": -922337203685477.0,
+      "maximum": 922337203685477.0,
+      "x-precision": 2
+    },
+    "context_currentstatedescription": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 4000
+    },
+    "context_decision": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 100
+    },
+    "context_decisiondate": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 100
+    },
+    "context_discountrate": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": -100000000000,
+      "maximum": 100000000000,
+      "x-precision": 2
+    },
+    "context_gatesummary": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 15000
+    },
+    "context_internaleffortfte": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": -922337203685477.0,
+      "maximum": 922337203685477.0,
+      "x-precision": 2
+    },
+    "context_justification": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 4000
+    },
+    "context_mitigationapproach": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 5000
+    },
+    "context_npv": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": -100000000000,
+      "maximum": 100000000000,
+      "x-precision": 2
+    },
+    "context_onetimecostscapex": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": -922337203685477.0,
+      "maximum": 922337203685477.0,
+      "x-precision": 2
+    },
+    "context_ongoingcostsopex": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": -922337203685477.0,
+      "maximum": 922337203685477.0,
+      "x-precision": 2
+    },
+    "context_orgimpact": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 5000
+    },
+    "context_paybackperiod": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": -100000000000,
+      "maximum": 100000000000,
+      "x-precision": 1
+    },
+    "context_regulatorymandatorydriver": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "context_revenuegrowth": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": -922337203685477.0,
+      "maximum": 922337203685477.0,
+      "x-precision": 2
+    },
+    "context_riskofinaction": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "enum": [
+        236150000,
+        236150001,
+        236150002,
+        null
+      ],
+      "x-choices": {
+        "236150000": "Low",
+        "236150001": "Medium",
+        "236150002": "High"
+      }
+    },
+    "context_roiadvanced": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": -100000000000,
+      "maximum": 100000000000,
+      "x-precision": 2
+    },
+    "context_stage": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 1000
+    },
+    "context_top3risks": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 5000
+    },
+    "context_totalinvestment": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": -922337203685477.0,
+      "maximum": 922337203685477.0,
+      "x-precision": 2
+    },
+    "context_vendorextcosts": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": -922337203685477.0,
+      "maximum": 922337203685477.0,
+      "x-precision": 2
+    },
+    "context_votecount": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0,
+      "maximum": 2147483647
+    },
+    "context_whathappensifwedonothing": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 5000
+    },
+    "context_whoisimpacted": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "enum": [
+        236150000,
+        236150001,
+        236150002,
+        null
+      ],
+      "x-choices": {
+        "236150000": "Functions",
+        "236150001": "Customers",
+        "236150002": "Regions"
+      }
+    },
+    "_createdby_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "systemuser"
+        ],
+        "bind": "CreatedBy"
+      }
+    },
+    "createdon": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "_createdonbehalfby_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "systemuser"
+        ],
+        "bind": "CreatedOnBehalfBy"
+      }
+    },
+    "exchangerate": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 1e-10,
+      "maximum": 100000000000,
+      "x-precision": 10
+    },
+    "importsequencenumber": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": -2147483648,
+      "maximum": 2147483647
+    },
+    "_modifiedby_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "systemuser"
+        ],
+        "bind": "ModifiedBy"
+      }
+    },
+    "modifiedon": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "_modifiedonbehalfby_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "systemuser"
+        ],
+        "bind": "ModifiedOnBehalfBy"
+      }
+    },
+    "overriddencreatedon": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date"
+    },
+    "_owningbusinessunit_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "businessunit"
+        ],
+        "bind": "OwningBusinessUnit"
+      }
+    },
+    "processid": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid"
+    },
+    "pum_benefitsestimate": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0.0,
+      "maximum": 922337203685477.0,
+      "x-precision": 0
+    },
+    "pum_budgetestimate": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0.0,
+      "maximum": 922337203685477.0,
+      "x-precision": 0
+    },
+    "_pum_category_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "pum_investmentcategory"
+        ],
+        "bind": "pum_Category"
+      }
+    },
+    "pum_createinitiative": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "pum_description": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 4000
+    },
+    "pum_hasinitiative": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "pum_ideascore": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0,
+      "maximum": 5
+    },
+    "pum_ideatype": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "enum": [
+        493840000,
+        493840001,
+        493840002,
+        493840003,
+        null
+      ],
+      "x-choices": {
+        "493840000": "TBD",
+        "493840001": "Run",
+        "493840002": "Grow",
+        "493840003": "Transform"
+      }
+    },
+    "pum_index": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": -100000000000,
+      "maximum": 100000000000,
+      "x-precision": 4
+    },
+    "_pum_linkedinitiative_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "pum_initiative"
+        ],
+        "bind": "pum_LinkedInitiative"
+      }
+    },
+    "pum_mustrun": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "_pum_portfolio_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "pum_portfolio"
+        ],
+        "bind": "pum_Portfolio"
+      }
+    },
+    "_pum_primaryobjective_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "pum_strategicobjectives"
+        ],
+        "bind": "pum_PrimaryObjective"
+      }
+    },
+    "pum_proposedend": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date"
+    },
+    "pum_proposedstart": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date"
+    },
+    "pum_rank": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": -2147483648,
+      "maximum": 2147483647
+    },
+    "pum_rating": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "enum": [
+        493840000,
+        493840001,
+        493840002,
+        493840003,
+        null
+      ],
+      "x-choices": {
+        "493840000": "⭐️",
+        "493840001": "⭐️⭐️",
+        "493840002": "⭐️⭐️⭐️",
+        "493840003": "❔"
+      }
+    },
+    "pum_revenuecomments": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 2000
+    },
+    "pum_revenuegrowth": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0,
+      "maximum": 10
+    },
+    "pum_roi": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": -100000000000,
+      "maximum": 100000000000,
+      "x-precision": 2
+    },
+    "pum_seeddata": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 100
+    },
+    "pum_selected": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "pum_strategicfit": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0,
+      "maximum": 10
+    },
+    "pum_strategycomments": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 2000
+    },
+    "pum_ybenefitsestimate": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": -922337203685477.0,
+      "maximum": 922337203685477.0,
+      "x-precision": 0
+    },
+    "_stageid_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "processstage"
+        ],
+        "bind": "stageid"
+      }
+    },
+    "statuscode": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "enum": [
+        1,
+        2,
+        null
+      ],
+      "x-choices": {
+        "1": "Active",
+        "2": "Inactive"
+      }
+    },
+    "timezoneruleversionnumber": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": -1,
+      "maximum": 2147483647
+    },
+    "_transactioncurrencyid_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "transactioncurrency"
+        ],
+        "bind": "TransactionCurrencyId"
+      }
+    },
+    "traversedpath": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 1250
+    },
+    "utcconversiontimezonecode": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": -1,
+      "maximum": 2147483647
+    },
+    "versionnumber": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    }
+  },
+  "additionalProperties": true,
+  "required": [
+    "_ownerid_value",
+    "pum_ideaid",
+    "pum_name",
+    "statecode"
+  ]
+}

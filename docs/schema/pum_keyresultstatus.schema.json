@@ -1,0 +1,305 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "pum_keyresultstatus.schema.json",
+  "title": "PumKeyresultstatus",
+  "description": "Read-shape for `pum_keyresultstatus` from the Dataverse Web API (lookups as `_<name>_value`). Machine-readable contract for runtime drift-detection in the shipped app.",
+  "x-dataverse": {
+    "table": "pum_keyresultstatus",
+    "env": "https://esben.crm.dynamics.com",
+    "generated": "2026-06-16",
+    "regenerate": "uv run python cli.py gen-schema pum_keyresultstatus"
+  },
+  "type": "object",
+  "properties": {
+    "pum_name": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "_ownerid_value": {
+      "type": "string",
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "systemuser",
+          "team"
+        ],
+        "bind": "OwnerId"
+      }
+    },
+    "pum_keyresultstatusid": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "statecode": {
+      "type": "integer",
+      "enum": [
+        0,
+        1
+      ],
+      "x-choices": {
+        "0": "Active",
+        "1": "Inactive"
+      }
+    },
+    "_createdby_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "systemuser"
+        ],
+        "bind": "CreatedBy"
+      }
+    },
+    "createdon": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "_createdonbehalfby_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "systemuser"
+        ],
+        "bind": "CreatedOnBehalfBy"
+      }
+    },
+    "importsequencenumber": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": -2147483648,
+      "maximum": 2147483647
+    },
+    "_modifiedby_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "systemuser"
+        ],
+        "bind": "ModifiedBy"
+      }
+    },
+    "modifiedon": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "_modifiedonbehalfby_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "systemuser"
+        ],
+        "bind": "ModifiedOnBehalfBy"
+      }
+    },
+    "overriddencreatedon": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date"
+    },
+    "_owningbusinessunit_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "businessunit"
+        ],
+        "bind": "OwningBusinessUnit"
+      }
+    },
+    "pum_comment": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 250
+    },
+    "pum_improvementdelta": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": -100000000000,
+      "maximum": 100000000000,
+      "x-precision": 2
+    },
+    "_pum_keyresults_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "pum_keyresults"
+        ],
+        "bind": "pum_KeyResults"
+      }
+    },
+    "pum_newstatus": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "enum": [
+        493840000,
+        493840001,
+        493840002,
+        null
+      ],
+      "x-choices": {
+        "493840000": "🟢 On Track",
+        "493840001": "🟡 Needs Attention",
+        "493840002": "🔴 Off Track"
+      }
+    },
+    "pum_progressdelta": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": -100000000000,
+      "maximum": 100000000000,
+      "x-precision": 2
+    },
+    "pum_realization": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": -100000000000,
+      "maximum": 100000000000,
+      "x-precision": 2
+    },
+    "pum_realizationin": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 4000
+    },
+    "pum_realizationwholenumber": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0,
+      "maximum": 2147483647
+    },
+    "pum_resulttarget": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": -100000000000,
+      "maximum": 100000000000,
+      "x-precision": 2
+    },
+    "pum_startvalue": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": -100000000000,
+      "maximum": 100000000000,
+      "x-precision": 2
+    },
+    "pum_statusdate": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date"
+    },
+    "pum_updated": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date"
+    },
+    "pum_updatestatus": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": -100000000000,
+      "maximum": 100000000000,
+      "x-precision": 2
+    },
+    "statuscode": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "enum": [
+        1,
+        2,
+        null
+      ],
+      "x-choices": {
+        "1": "Active",
+        "2": "Inactive"
+      }
+    },
+    "timezoneruleversionnumber": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": -1,
+      "maximum": 2147483647
+    },
+    "utcconversiontimezonecode": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": -1,
+      "maximum": 2147483647
+    },
+    "versionnumber": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    }
+  },
+  "additionalProperties": true,
+  "required": [
+    "_ownerid_value",
+    "pum_keyresultstatusid",
+    "pum_name",
+    "statecode"
+  ]
+}

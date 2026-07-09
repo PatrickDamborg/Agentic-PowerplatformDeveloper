@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "pum_financialstructure_pum_pf_costcateg.schema.json",
+  "title": "PumFinancialstructurePumPfCostcateg",
+  "description": "Read-shape for `pum_financialstructure_pum_pf_costcateg` from the Dataverse Web API (lookups as `_<name>_value`). Machine-readable contract for runtime drift-detection in the shipped app.",
+  "x-dataverse": {
+    "table": "pum_financialstructure_pum_pf_costcateg",
+    "env": "https://esben.crm.dynamics.com",
+    "generated": "2026-06-16",
+    "regenerate": "uv run python cli.py gen-schema pum_financialstructure_pum_pf_costcateg"
+  },
+  "type": "object",
+  "properties": {
+    "pum_financialstructure_pum_pf_costcategid": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "pum_financialstructureid": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "pum_pf_costcategoryid": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "versionnumber": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    }
+  },
+  "additionalProperties": true,
+  "required": [
+    "pum_financialstructure_pum_pf_costcategid",
+    "pum_financialstructureid",
+    "pum_pf_costcategoryid"
+  ]
+}

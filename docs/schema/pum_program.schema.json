@@ -1,0 +1,766 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "pum_program.schema.json",
+  "title": "PumProgram",
+  "description": "Read-shape for `pum_program` from the Dataverse Web API (lookups as `_<name>_value`). Machine-readable contract for runtime drift-detection in the shipped app.",
+  "x-dataverse": {
+    "table": "pum_program",
+    "env": "https://esben.crm.dynamics.com",
+    "generated": "2026-06-16",
+    "regenerate": "uv run python cli.py gen-schema pum_program"
+  },
+  "type": "object",
+  "properties": {
+    "pum_program": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "_ownerid_value": {
+      "type": "string",
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "systemuser",
+          "team"
+        ],
+        "bind": "OwnerId"
+      }
+    },
+    "pum_programid": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "statecode": {
+      "type": "integer",
+      "enum": [
+        0,
+        1
+      ],
+      "x-choices": {
+        "0": "Active",
+        "1": "Inactive"
+      }
+    },
+    "context_mustrun": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "context_roadmaprank": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": -2147483648,
+      "maximum": 2147483647
+    },
+    "context_roi": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": -100000000000,
+      "maximum": 100000000000,
+      "x-precision": 2
+    },
+    "context_selected": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "context_statuscomments": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 4000
+    },
+    "context_totalbenefits3y": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": -922337203685477.0,
+      "maximum": 922337203685477.0,
+      "x-precision": 2
+    },
+    "_createdby_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "systemuser"
+        ],
+        "bind": "CreatedBy"
+      }
+    },
+    "createdon": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "_createdonbehalfby_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "systemuser"
+        ],
+        "bind": "CreatedOnBehalfBy"
+      }
+    },
+    "exchangerate": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 1e-10,
+      "maximum": 100000000000,
+      "x-precision": 10
+    },
+    "importsequencenumber": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": -2147483648,
+      "maximum": 2147483647
+    },
+    "_modifiedby_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "systemuser"
+        ],
+        "bind": "ModifiedBy"
+      }
+    },
+    "modifiedon": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "_modifiedonbehalfby_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "systemuser"
+        ],
+        "bind": "ModifiedOnBehalfBy"
+      }
+    },
+    "overriddencreatedon": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date"
+    },
+    "_owningbusinessunit_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "businessunit"
+        ],
+        "bind": "OwningBusinessUnit"
+      }
+    },
+    "processid": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid"
+    },
+    "_pum_category_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "pum_investmentcategory"
+        ],
+        "bind": "pum_Category"
+      }
+    },
+    "pum_currentstagetextfield": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 100
+    },
+    "pum_description": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 100
+    },
+    "pum_initiativescount": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": -2147483648,
+      "maximum": 2147483647
+    },
+    "pum_initiativescount_date": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "pum_initiativescount_state": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": -2147483648,
+      "maximum": 2147483647
+    },
+    "_pum_keyresults_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "pum_keyresults"
+        ],
+        "bind": "pum_KeyResults"
+      }
+    },
+    "pum_kpicost": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "enum": [
+        493840000,
+        493840001,
+        493840002,
+        493840003,
+        null
+      ],
+      "x-choices": {
+        "493840000": "⚪ Not Set",
+        "493840001": "🔴 Need help",
+        "493840002": "🟡 At risk",
+        "493840003": "🟢 No issue"
+      }
+    },
+    "pum_kpiquality": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "enum": [
+        493840000,
+        493840001,
+        493840002,
+        493840003,
+        null
+      ],
+      "x-choices": {
+        "493840000": "⚪ Not Set",
+        "493840001": "🔴 Need help",
+        "493840002": "🟡 At risk",
+        "493840003": "🟢 No issue"
+      }
+    },
+    "pum_kpiresources": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "enum": [
+        493840000,
+        493840001,
+        493840002,
+        493840003,
+        null
+      ],
+      "x-choices": {
+        "493840000": "⚪ Not Set",
+        "493840001": "🔴 Need help",
+        "493840002": "🟡 At risk",
+        "493840003": "🟢 No issue"
+      }
+    },
+    "pum_kpiscope": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "enum": [
+        493840000,
+        493840001,
+        493840002,
+        493840003,
+        null
+      ],
+      "x-choices": {
+        "493840000": "⚪ Not Set",
+        "493840001": "🔴 Need help",
+        "493840002": "🟡 At risk",
+        "493840003": "🟢 No issue"
+      }
+    },
+    "pum_kpisummary": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "enum": [
+        493840000,
+        493840001,
+        493840002,
+        493840003,
+        null
+      ],
+      "x-choices": {
+        "493840000": "⚪ Not Set",
+        "493840001": "🔴 Need help",
+        "493840002": "🟡 At risk",
+        "493840003": "🟢 No issue"
+      }
+    },
+    "pum_kpisummarycomment": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 2000
+    },
+    "pum_kpitimeline": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "enum": [
+        493840000,
+        493840001,
+        493840002,
+        493840003,
+        null
+      ],
+      "x-choices": {
+        "493840000": "⚪ Not Set",
+        "493840001": "🔴 Need help",
+        "493840002": "🟡 At risk",
+        "493840003": "🟢 No issue"
+      }
+    },
+    "pum_mustrun": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "pum_okr": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "_pum_portfolio_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "pum_portfolio"
+        ],
+        "bind": "pum_Portfolio"
+      }
+    },
+    "pum_programfinish": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date"
+    },
+    "_pum_programreadteam_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "team"
+        ],
+        "bind": "pum_ProgramReadTeam"
+      }
+    },
+    "_pum_programreadwriteteam_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "team"
+        ],
+        "bind": "pum_ProgramReadWriteTeam"
+      }
+    },
+    "pum_programstart": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date"
+    },
+    "pum_programstatus": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "enum": [
+        493840000,
+        493840001,
+        493840002,
+        493840003,
+        null
+      ],
+      "x-choices": {
+        "493840000": "⚪ Not Set",
+        "493840001": "🔴 Need help",
+        "493840002": "🟡 At risk",
+        "493840003": "🟢 No issue"
+      }
+    },
+    "pum_progress": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": -100000000000,
+      "maximum": 100000000000,
+      "x-precision": 2
+    },
+    "pum_progress_date": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "pum_progress_state": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": -2147483648,
+      "maximum": 2147483647
+    },
+    "pum_progressforviews": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 4000
+    },
+    "pum_rank": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": -2147483648,
+      "maximum": 2147483647
+    },
+    "pum_roi": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": -100000000000,
+      "maximum": 100000000000,
+      "x-precision": 2
+    },
+    "pum_schedulecompletion": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": -2147483648,
+      "maximum": 2147483647
+    },
+    "pum_schedulecompletion_count": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": -2147483648,
+      "maximum": 2147483647
+    },
+    "pum_schedulecompletion_date": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "pum_schedulecompletion_state": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": -2147483648,
+      "maximum": 2147483647
+    },
+    "pum_schedulecompletion_sum": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "maximum": 1000000000,
+      "x-precision": 2
+    },
+    "pum_seeddata": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 100
+    },
+    "pum_selected": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "_pum_sponsor_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "systemuser"
+        ],
+        "bind": "pum_Sponsor"
+      }
+    },
+    "pum_status": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "enum": [
+        493840005,
+        493840004,
+        493840006,
+        493840000,
+        493840001,
+        493840002,
+        493840003,
+        null
+      ],
+      "x-choices": {
+        "493840005": "Proposed",
+        "493840004": "Under Evaluation",
+        "493840006": "Authorized",
+        "493840000": "Active",
+        "493840001": "On Hold / Suspended",
+        "493840002": "Closing",
+        "493840003": "Completed"
+      }
+    },
+    "pum_totalactualcost": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": -922337203685477.0,
+      "maximum": 922337203685477.0,
+      "x-precision": 2
+    },
+    "pum_totalactualcost_date": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "pum_totalactualcost_state": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": -2147483648,
+      "maximum": 2147483647
+    },
+    "pum_totalbenefits3y": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": -922337203685477.0,
+      "maximum": 922337203685477.0,
+      "x-precision": 2
+    },
+    "pum_totalbudget": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": -922337203685477.0,
+      "maximum": 922337203685477.0,
+      "x-precision": 2
+    },
+    "pum_totalbudget_date": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "pum_totalbudget_state": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": -2147483648,
+      "maximum": 2147483647
+    },
+    "pum_totalwork": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": -2147483648,
+      "maximum": 2147483647
+    },
+    "pum_totalwork_date": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "pum_totalwork_state": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": -2147483648,
+      "maximum": 2147483647
+    },
+    "_stageid_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "processstage"
+        ],
+        "bind": "stageid"
+      }
+    },
+    "statuscode": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "enum": [
+        1,
+        2,
+        null
+      ],
+      "x-choices": {
+        "1": "Active",
+        "2": "Inactive"
+      }
+    },
+    "timezoneruleversionnumber": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": -1,
+      "maximum": 2147483647
+    },
+    "_transactioncurrencyid_value": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "x-lookup": {
+        "targets": [
+          "transactioncurrency"
+        ],
+        "bind": "TransactionCurrencyId"
+      }
+    },
+    "traversedpath": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 1250
+    },
+    "utcconversiontimezonecode": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": -1,
+      "maximum": 2147483647
+    },
+    "versionnumber": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    }
+  },
+  "additionalProperties": true,
+  "required": [
+    "_ownerid_value",
+    "pum_program",
+    "pum_programid",
+    "statecode"
+  ]
+}
