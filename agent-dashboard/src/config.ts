@@ -13,7 +13,32 @@ export const CONFIG = {
     typeCol: "pda_agenttype",
     targetCol: "pda_targetid",
     triggerUrlCol: "pda_triggerurl",
-    typeValues: { copilot: 100000000, autonomous: 100000001 }
+    scopeCol: "pda_scope",
+    typeValues: { copilot: 100000000, autonomous: 100000001 },
+    scopeValues: { initiative: 100000000, program: 100000001, portfolio: 100000002 }
+  },
+
+  // Tables the project-picker dialog browses, one per pda_scope value. The
+  // selected record's id is bound to the matching lookup column on pda_agentruns.
+  scopeTables: {
+    initiative: {
+      entitySet: "pum_initiatives",
+      idCol: "pum_initiativeid",
+      nameCol: "pum_name",
+      runLookupCol: "pda_Initiative"
+    },
+    program: {
+      entitySet: "pum_programs",
+      idCol: "pum_programid",
+      nameCol: "pum_program",
+      runLookupCol: "pda_Program"
+    },
+    portfolio: {
+      entitySet: "pum_portfolios",
+      idCol: "pum_portfolioid",
+      nameCol: "pum_portfolio",
+      runLookupCol: "pda_Portfolio"
+    }
   },
 
   // Contract table the agent workflow writes its step/approval rows into.
@@ -34,6 +59,19 @@ export const CONFIG = {
     typeValues: { step: 100000000, approval: 100000001, input: 100000002 },
     statusValues: { running: 100000000, completed: 100000001, failed: 100000002, waiting: 100000003 },
     responseValues: { approved: 100000000, rejected: 100000001 }
+  },
+
+  // Custom Dataverse table used to fire an agent: the dashboard creates a row here,
+  // and the agent workflow's Dataverse trigger ("When a row is added") reacts to it
+  // with a filter on the monitored agent lookup. No HTTP trigger, no OAuth, no secrets.
+  // createdby/modifiedby land on the row as the real signed-in user.
+  fireTable: {
+    entitySet: "pda_agentruns",
+    idCol: "pda_agentrunid",
+    nameCol: "pda_name",
+    messageCol: "pda_message",
+    agentCol: "pda_xPMAgent",
+    statusCol: "pda_status"
   },
 
   features: {

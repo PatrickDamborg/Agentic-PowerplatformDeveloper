@@ -1,4 +1,4 @@
-import { createDarkTheme, type BrandVariants, type Theme } from "@fluentui/react-components";
+import { createDarkTheme, createLightTheme, type BrandVariants, type Theme } from "@fluentui/react-components";
 
 // Brand ramp centred on the legacy dashboard's purple accent, tuned for the
 // "dark office" backdrop the pixel workers live in.
@@ -32,11 +32,36 @@ export const pixelDarkTheme: Theme = {
   colorNeutralStroke2: "#2a2b40"
 };
 
+export const pixelLightTheme: Theme = {
+  ...createLightTheme(pixelBrand),
+  colorNeutralBackground1: "#ffffff",
+  colorNeutralBackground2: "#f6f5fc",
+  colorNeutralBackground3: "#ece9f8",
+  colorNeutralBackground1Hover: "#f0eefc",
+  colorNeutralBackground1Pressed: "#e6e2f9",
+  colorNeutralStroke1: "#dad5f0",
+  colorNeutralStroke2: "#e4e1f5"
+};
+
+export type ThemeMode = "light" | "dark";
+
+export const shellBackground: Record<ThemeMode, { bg: string; image: string }> = {
+  dark: {
+    bg: "#11111b",
+    image: "radial-gradient(circle at 20% 0%, #1e1e2e 0%, #11111b 60%)"
+  },
+  light: {
+    bg: "#ece9f8",
+    image: "radial-gradient(circle at 20% 0%, #ffffff 0%, #ece9f8 60%)"
+  }
+};
+
 // Retro accent colors shared by the pixel components (HUD, speech bubbles,
 // matrix skeleton) — deliberately outside the Fluent token system.
 export const retro = {
   green: "#00ff41",
   greenSoft: "#aaffaa",
+  greenMoss: "#5f8b5a",
   sky: "#7dcfff",
   orange: "#ffb86c",
   red: "#ff5555",
